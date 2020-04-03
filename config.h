@@ -72,7 +72,7 @@ static const char *termcmd[]  = { "st", NULL };
 static Key keys[] = {
 	/* modifier                     key        function        argument */
     // Spawn Commands
-	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
+ 	// { MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
 	// { MODKEY,                       XK_t,            spawn,          {.v = termcmd } },
 
 	// { MODKEY,                       XK_b,      togglebar,      {0} },
@@ -104,7 +104,7 @@ static Key keys[] = {
 	// { MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	// { MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
 
-    { MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
+    // { MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
 
     // Tag Keys
 	TAGKEYS(                        XK_1,                      0)
