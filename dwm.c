@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <math.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <X11/cursorfont.h>
@@ -2037,6 +2038,15 @@ view(const Arg *arg)
 {
 	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
 		return;
+
+	/* Get Highest Selected Tag */
+	int tag = (int) (log(arg->ui)/log(2));
+	/* Change Command Number */
+	tagswap_cmd_number[0] = '0' + tag;
+	/* Spawn the actual Command */
+	const Arg a = { .v = tagswap_cmd };
+	spawn( &a );
+	
 	selmon->seltags ^= 1; /* toggle sel tagset */
 	if (arg->ui & TAGMASK)
 		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
