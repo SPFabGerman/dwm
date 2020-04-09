@@ -2,18 +2,22 @@
 
 /* appearance */
 static const unsigned int borderpx  = 2;        /* border pixel of windows */
-static const unsigned int snap      = 32;       /* snap pixel */
+static const unsigned int snap      = 16;       /* snap pixel */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
 #define MAINFONT "MesloLGS NF:size=10"
 static const char *fonts[]          = { MAINFONT };
 static const char dmenufont[]       = MAINFONT;
-static char col_bg_norm[]       = "#222222";
-static char col_bg_sel[]       = "#444444";
-static char col_fg_norm[]       = "#bbbbbb";
-static char col_fg_sel[]       = "#eeeeee";
-static char col_brd_sel[]        = "#519fdf";
-static char col_brd_norm[]     = "#88b369";
+#define BLACK "#282c34"
+#define WHITE "#dcdfe4"
+#define CYAN "#519fdf"
+#define GREEN "#88b369"
+static char col_bg_norm[]       = BLACK;
+static char col_bg_sel[]       = WHITE;
+static char col_fg_norm[]       = WHITE;
+static char col_fg_sel[]       = BLACK;
+static char col_brd_sel[]        = CYAN;
+static char col_brd_norm[]     = GREEN;
 static const unsigned int baralpha = 0xd0;
 static const unsigned int borderalpha = OPAQUE;
 static char *colors[][3]      = {
@@ -51,7 +55,7 @@ static const Layout layouts[] = {
 	{ "[]=",      tile },    /* first entry is default */
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "[M]",      monocle },
-    { "###",      gaplessgrid },
+	{ "###",      gaplessgrid },
 };
 
 /* key definitions */
@@ -72,7 +76,7 @@ static const char *termcmd[]  = { "st", NULL };
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
-    // Spawn Commands
+	// Spawn Commands
  	// { MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
 	// { MODKEY,                       XK_t,            spawn,          {.v = termcmd } },
 
@@ -87,27 +91,26 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Tab,    view,           {0} }, // Tab betwenn recent Tags
 	{ MODKEY,                       XK_c,      killclient,     {0} },
 
-    // Change Layouts
+	// Change Layouts
 	{ MODKEY|ShiftMask,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY|ShiftMask,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY|ShiftMask,                       XK_m,      setlayout,      {.v = &layouts[2]} },
-    { MODKEY|ShiftMask,                       XK_g,      setlayout,      {.v = &layouts[3]} },
+	{ MODKEY|ShiftMask,                       XK_g,      setlayout,      {.v = &layouts[3]} },
 	{ MODKEY|ShiftMask,                       XK_Tab,    setlayout,      {0} },
 	{ MODKEY,                                 XK_space,  togglefloating, {0} },
 
-	// All Tags
-    { MODKEY,                       XK_0,      view,           {.ui = ~0 } },
-	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
+	// { MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
 
-    // Monitor Setup
+	// Monitor Setup
 	// { MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
 	// { MODKEY,                       XK_period, focusmon,       {.i = +1 } },
 	// { MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	// { MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
 
-    // { MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
+	// Tag Keys
+	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
+	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
 
-    // Tag Keys
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
@@ -118,7 +121,7 @@ static Key keys[] = {
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
 
-    // Stop DWM
+	// Stop DWM
 	// { MODKEY,                       XK_r,      quit,           {0} },
 };
 
