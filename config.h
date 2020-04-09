@@ -58,6 +58,11 @@ static const Layout layouts[] = {
 	{ "###",      gaplessgrid },
 };
 
+/* Command to be executed, when swapping the tag.
+ * tagswap_cmd_number will be replaced by the number of the selected tag. */
+static char tagswap_cmd_number[2] = "1";
+static const char * tagswap_cmd[] = { "swapbg", tagswap_cmd_number /* Will be later replaced */, NULL };
+
 /* key definitions */
 #define MODKEY Mod4Mask
 #define TAGKEYS(KEY,TAG) \
