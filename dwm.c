@@ -2175,7 +2175,7 @@ view(const Arg *arg)
 	/* Get Highest Selected Tag */
 	int tag = (int) (log(arg->ui)/log(2));
 	/* Change Command Number */
-	tagswap_cmd_number[0] = '0' + tag;
+	tagswap_cmd_number[0] = '1' + tag;
 	/* Spawn the actual Command */
 	const Arg a = { .v = tagswap_cmd };
 	spawn( &a );
