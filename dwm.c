@@ -307,7 +307,6 @@ static Visual *visual;
 static int depth;
 static Colormap cmap;
 
-/* OK? */
 static Clientlist *cl;
 
 /* configuration, allows nested code to access above variables */
@@ -341,8 +340,6 @@ applyrules(Client *c)
 		{
 			c->isfloating = r->isfloating;
 			c->tags |= r->tags;
-			/* OK?
-			for (m = mons; m && m->num != r->monitor; m = m->next); */
 			for (m = mons; m && (m->tagset[m->seltags] & c->tags) == 0; m = m->next) ;
 			if (m)
 				c->mon = m;
@@ -470,7 +467,7 @@ attachclients(Monitor *m) {
 	/* collect information about the tags in use */
 	for(tm = mons; tm; tm = tm->next)
 		if(tm != m)
-			utags |= m->tagset[m->seltags];
+			utags |= tm->tagset[tm->seltags];
 
 	for(c = m->cl->clients; c; c = c->next)
 		if(ISVISIBLE(c, m)) {
@@ -602,12 +599,6 @@ clientmessage(XEvent *e)
 	} else if (cme->message_type == netatom[NetActiveWindow]) {
 		if (c != selmon->sel && !c->isurgent)
 			seturgent(c, 1);
-		/* OK? 
-		if(!ISVISIBLE(c, c->mon)) {
-			c->mon->seltags ^= 1;
-			c->mon->tagset[c->mon->seltags] = c->tags;
-		}
-		pop(c); */
 	}
 }
 
@@ -713,21 +704,32 @@ configurerequest(XEvent *e)
 Monitor *
 createmon(void)
 {
-	/* OK?
-	m = ecalloc(1, sizeof(Monitor));
-	m->tagset[0] = m->tagset[1] = 1; */
 	Monitor *m, *tm;
-	unsigned int i;
+	int i;
 
-	if(!(m = (Monitor *)calloc(1, sizeof(Monitor))))
-		die("fatal: could not malloc() %u bytes\n", sizeof(Monitor));
-	m->cl = cl;
-	/* reassing tags when creating a new monitor */
-	for(i=1, tm = mons; tm; tm = tm->next, i++) {
-		tm->seltags ^= 1;
-		tm->tagset[tm->seltags] = i;
+	/* bail out if the number of monitors exceeds the number of tags */
+	for (i=1, tm=mons; tm; i++, tm=tm->next);
+	if (i > LENGTH(tags)) {
+		fprintf(stderr, "dwm: failed to add monitor, number of tags exceeded\n");
+		return NULL;
 	}
-	m->tagset[0] = m->tagset[1] = i;
+	/* find the first tag that isn't in use */
+	for (i=0; i < LENGTH(tags); i++) {
+		for (tm=mons; tm && !(tm->tagset[tm->seltags] & (1<<i)); tm=tm->next);
+		if (!tm)
+			break;
+	}
+	/* reassign all tags to monitors since there's currently no free tag for the
+	 * new monitor */
+	if (i >= LENGTH(tags))
+		for (i=0, tm=mons; tm; tm=tm->next, i++) {
+			tm->seltags ^= 1;
+			tm->tagset[tm->seltags] = (1<<i) & TAGMASK;
+		}
+
+	m = ecalloc(1, sizeof(Monitor));
+	m->cl = cl;
+	m->tagset[0] = m->tagset[1] = (1<<i) & TAGMASK;
 	m->mfact = mfact;
 	m->nmaster = nmaster;
 	m->showbar = showbar;
@@ -1605,8 +1607,6 @@ sendmon(Client *c, Monitor *m)
 	if (c->mon == m)
 		return;
 	unfocus(c, 1);
-	/* OK?
-	detach(c); */
 	detachstack(c);
 	c->mon = m;
 	c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
@@ -1732,6 +1732,8 @@ setup(void)
 	screen = DefaultScreen(dpy);
 	sw = DisplayWidth(dpy, screen);
 	sh = DisplayHeight(dpy, screen);
+	if(!(cl = (Clientlist *)calloc(1, sizeof(Clientlist))))
+		die("fatal: could not malloc() %u bytes\n", sizeof(Clientlist));
 	root = RootWindow(dpy, screen);
 	xinitvisual();
 	drw = drw_create(dpy, screen, root, sw, sh, visual, depth, cmap);
@@ -1739,9 +1741,6 @@ setup(void)
 		die("no fonts could be loaded.");
 	lrpad = drw->fonts->h;
 	bh = drw->fonts->h + 2;
-	/* OK? */
-	if(!(cl = (Clientlist *)calloc(1, sizeof(Clientlist))))
-		die("fatal: could not malloc() %u bytes\n", sizeof(Clientlist));
 	updategeom();
 	/* init atoms */
 	utf8string = XInternAtom(dpy, "UTF8_STRING", False);
@@ -1962,9 +1961,9 @@ toggleview(const Arg *arg)
 			if(m != selmon && newtagset & m->tagset[m->seltags])
 				return;
 		selmon->tagset[selmon->seltags] = newtagset;
-		attachclients(selmon);
 		focus(NULL);
 		arrange(selmon);
+		attachclients(selmon);
 	}
 }
 
@@ -2118,15 +2117,6 @@ updategeom(void)
 		} else { /* less monitors available nn < n */
 			for (i = nn; i < n; i++) {
 				for (m = mons; m && m->next; m = m->next);
-				/* OK?
-				while ((c = m->cl->clients)) {
-					dirty = 1;
-					m->cl->clients = c->next;
-					detachstack(c);
-					c->mon = mons;
-					attach(c);
-					attachstack(c);
-				} */
 				if (m == selmon)
 					selmon = mons;
 				for(c = m->cl->clients; c; c = c->next) {
@@ -2289,6 +2279,7 @@ view(const Arg *arg)
 			 * are connected */
 			if(newtagset & selmon->tagset[selmon->seltags])
 				return;
+			m->sel = selmon->sel;
 			m->seltags ^= 1;
 			m->tagset[m->seltags] = selmon->tagset[selmon->seltags];
 			attachclients(m);
@@ -2299,8 +2290,11 @@ view(const Arg *arg)
 	selmon->seltags ^= 1; /* toggle sel tagset */
 	if (arg->ui & TAGMASK)
 		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
+	/* TODO: Reihenfole prüfen. So hier scheint das richtig zu sein,
+	 * aber der single Tagset Patch führt attachclients() nach focus() aus. */
 	attachclients(selmon);
 	focus(NULL);
+	/* TODO: Maybe remove arrange here? (Is deleted by the newest version of single tagset patch.) */
 	arrange(selmon);
 }
 
