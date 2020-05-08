@@ -2406,8 +2406,14 @@ xrdb(const Arg *arg)
 {
   loadxrdb();
   int i;
+  Monitor * m;
+  Client * c;
   for (i = 0; i < LENGTH(colors); i++)
-                scheme[i] = drw_scm_create(drw, colors[i], alphas[i], 3);
+	scheme[i] = drw_scm_create(drw, colors[i], alphas[i], 3);
+  /* Redraw every Border. */
+  for (m = mons; m; m = m->next)
+    for (c = m->cl->clients; c; c = c->next)
+      XSetWindowBorder(dpy, c->win, scheme[SchemeNorm][ColBorder].pixel);
   focus(NULL);
   arrange(NULL);
 }
