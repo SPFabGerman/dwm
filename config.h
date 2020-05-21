@@ -24,7 +24,7 @@ static const unsigned int borderalpha = OPAQUE;
 static char *colors[][3]      = {
 	/*               fg         bg         border   */
 	[SchemeNorm] = { col_fg_norm, col_bg_norm, col_brd_norm },
-	[SchemeSel]  = { col_fg_sel, col_bg_sel, col_brd_sel  },
+	[SchemeSel]  = { col_fg_sel, col_bg_sel, col_brd_sel },
 };
 static const unsigned int alphas[][3]      = {
 	/*               fg      bg        border     */
@@ -41,8 +41,7 @@ static const Rule rules[] = {
 	 *	WM_NAME(STRING) = title
 	 */
 	/* class      instance    title       tags mask     isfloating   monitor */
-	{ "Gimp",     NULL,       NULL,       0,            1,           -1 },
-	{ "Firefox",  NULL,       NULL,       1 << 8,       0,           -1 },
+	{ "zoom",  NULL,       NULL,       1 << 8,       0,           -1 },
 };
 
 /* layout(s) */
@@ -108,8 +107,8 @@ static Key keys[] = {
 	// { MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
 
 	// Monitor Setup
-	// { MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
-	// { MODKEY,                       XK_period, focusmon,       {.i = +1 } },
+	{ MODKEY|ControlMask,                       XK_Right,  focusmon,       {.i = -1 } },
+	{ MODKEY|ControlMask,                       XK_Left, focusmon,       {.i = +1 } },
 	// { MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	// { MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
 
