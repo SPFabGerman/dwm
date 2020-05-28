@@ -2350,9 +2350,9 @@ view(const Arg *arg)
 		return;
 
 	/* Get Highest Selected Tag */
-	int tag = (int) (log(arg->ui)/log(2));
+	int htag = (int) (log(arg->ui)/log(2));
 	/* Change Command Number */
-	tagswap_cmd_number[0] = '1' + tag;
+	tagswap_cmd_number[0] = '1' + htag;
 	/* Spawn the actual Command */
 	const Arg a = { .v = tagswap_cmd };
 	spawn( &a );
@@ -2370,11 +2370,16 @@ view(const Arg *arg)
 			m->seltags ^= 1;
 			m->tagset[m->seltags] = selmon->tagset[selmon->seltags];
 
-			m->nmaster = m->pertag->nmasters[m->pertag->curtag];
-			m->mfact = m->pertag->mfacts[m->pertag->curtag];
-			m->sellt = m->pertag->sellts[m->pertag->curtag];
-			m->lt[m->sellt] = m->pertag->ltidxs[m->pertag->curtag][m->sellt];
-			m->lt[m->sellt^1] = m->pertag->ltidxs[m->pertag->curtag][m->sellt^1];
+			/* Find lowest Tag to swap. */
+			for (i = 0; !(m->tagset[m->seltags] & 1 << i); i++) ;
+			int ltag = i + 1;
+
+			/* Apply all changes, based on this lowest tag. */
+			m->nmaster = m->pertag->nmasters[ltag];
+			m->mfact = m->pertag->mfacts[ltag];
+			m->sellt = m->pertag->sellts[ltag];
+			m->lt[m->sellt] = m->pertag->ltidxs[ltag][m->sellt];
+			m->lt[m->sellt^1] = m->pertag->ltidxs[ltag][m->sellt^1];
 
 			attachclients(m);
 			arrange(m);
