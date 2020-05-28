@@ -52,7 +52,7 @@ tcl(Monitor * m)
 		}
 	}
 
-	x = (n + 1 / 2) == 1 ? mw : m->wx;
+	x = (n + 1 / 2) == 1 ? mw + m->wx : m->wx;
 	y = m->wy;
 	h = m->wh / ((n + 1) / 2);
 
