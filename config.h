@@ -58,6 +58,7 @@ static const Layout layouts[] = {
 	{ "[M]",      monocle },
 	{ "###",      gaplessgrid },
 	{ "\\\\\\",   dwindle },
+	{ "TTT",      bstack },
 };
 
 /* Command to be executed, when swapping the tag.
@@ -104,6 +105,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY|ShiftMask,                       XK_g,      setlayout,      {.v = &layouts[3]} },
 	{ MODKEY|ShiftMask,                       XK_d,      setlayout,      {.v = &layouts[4]} },
+	{ MODKEY|ShiftMask,                       XK_b,      setlayout,      {.v = &layouts[5]} },
 	{ MODKEY|ShiftMask,                       XK_Tab,    setlayout,      {0} },
 	{ MODKEY,                                 XK_space,  togglefloating, {0} },
 
