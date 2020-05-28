@@ -49,8 +49,10 @@ static const float mfact     = 0.5; /* factor of master area size [0.05..0.95] *
 static const int nmaster     = 1;    /* number of clients in master area */
 static const int resizehints = 0;    /* 1 means respect size hints in tiled resizals */
 
+/* === Layouts === */
 #include "gaplessgrid.c"
 #include "fibonacci.c"
+#include "tcl.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
 	{ "[]=",      tile },    /* first entry is default */
@@ -59,6 +61,7 @@ static const Layout layouts[] = {
 	{ "###",      gaplessgrid },
 	{ "\\\\\\",   dwindle },
 	{ "TTT",      bstack },
+	{ "|||",      tcl },
 };
 
 /* Command to be executed, when swapping the tag.
@@ -106,6 +109,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,                       XK_g,      setlayout,      {.v = &layouts[3]} },
 	{ MODKEY|ShiftMask,                       XK_d,      setlayout,      {.v = &layouts[4]} },
 	{ MODKEY|ShiftMask,                       XK_b,      setlayout,      {.v = &layouts[5]} },
+	{ MODKEY|ShiftMask,                       XK_c,      setlayout,      {.v = &layouts[6]} },
 	{ MODKEY|ShiftMask,                       XK_Tab,    setlayout,      {0} },
 	{ MODKEY,                                 XK_space,  togglefloating, {0} },
 
