@@ -165,6 +165,7 @@ typedef struct {
 	unsigned int tags;
 	int isfloating;
 	int monitor;
+	const Layout *lt;
 } Rule;
 
 struct Clientlist {
@@ -234,6 +235,7 @@ static void setclientstate(Client *c, long state);
 static void setfocus(Client *c);
 static void setfullscreen(Client *c, int fullscreen);
 static void setlayout(const Arg *arg);
+static void setlayoutcustommonitor(const Arg *arg, Monitor *m);
 static void setmfact(const Arg *arg);
 static void setup(void);
 static void seturgent(Client *c, int urg);
@@ -340,6 +342,7 @@ applyrules(Client *c)
 	const Rule *r;
 	Monitor *m;
 	XClassHint ch = { NULL, NULL };
+	const Layout *newLayout = NULL;
 
 	/* rule matching */
 	c->isfloating = 0;
@@ -359,6 +362,8 @@ applyrules(Client *c)
 			for (m = mons; m && (m->tagset[m->seltags] & c->tags) == 0; m = m->next) ;
 			if (m)
 				c->mon = m;
+			if (r->lt)
+				newLayout = r->lt;
 		}
 	}
 	if (ch.res_class)
@@ -366,6 +371,22 @@ applyrules(Client *c)
 	if (ch.res_name)
 		XFree(ch.res_name);
 	c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
+
+	/* Change Layout on all tags and update the Monitor. */
+	if (newLayout) {
+		for(i = 0; i <=LENGTH(tags); i++) {
+			if(c->tags & 1<<i) {
+				// Loop over the tags of the client
+				pertagglist->sellts[(i+1)%(LENGTH(tags)+1)] ^= 1;
+				pertagglist->ltidxs[(i+1)%(LENGTH(tags)+1)]
+					[pertagglist->sellts[(i+1)%(LENGTH(tags)+1)]] = newLayout;
+			}
+		}
+		if (c->mon->tagset[c->mon->seltags] & c->tags) {
+			Arg a = { .v = newLayout };
+			setlayoutcustommonitor(&a, c->mon);
+		}
+	}
 }
 
 int
@@ -1735,6 +1756,34 @@ setlayout(const Arg *arg)
 		arrange(selmon);
 	else
 		drawbar(selmon);
+}
+
+void
+setlayoutcustommonitor(const Arg *arg, Monitor *m)
+{
+	unsigned int i;
+	if (!m) {
+		setlayout(arg);
+		return ;
+	}
+	if (!arg || !arg->v || arg->v != m->lt[m->sellt])
+		m->sellt ^= 1;
+	if (arg && arg->v)
+		m->lt[m->sellt] = (Layout *)arg->v;
+	strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
+
+	for(i=0; i<=LENGTH(tags); ++i)
+		if(m->tagset[m->seltags] & 1<<i)
+		{
+			// Loop over all selected Tags
+			m->pertag->ltidxs[(i+1)%(LENGTH(tags)+1)][m->sellt] = m->lt[m->sellt]; 
+			m->pertag->sellts[(i+1)%(LENGTH(tags)+1)] = m->sellt;
+		}
+
+	if (m->sel)
+		arrange(m);
+	else
+		drawbar(m);
 }
 
 /* arg > 1.0 will set mfact absolutely */

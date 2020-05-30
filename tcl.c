@@ -52,6 +52,7 @@ tcl(Monitor * m)
 		}
 	}
 
+	// TODO: The calculation for x looks just wierd? Why the wierd division?
 	x = (n + 1 / 2) == 1 ? mw + m->wx : m->wx;
 	y = m->wy;
 	h = m->wh / ((n + 1) / 2);
