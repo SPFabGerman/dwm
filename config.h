@@ -62,6 +62,7 @@ static const Rule rules[] = {
 	 */
 	/* class      instance    title       tags mask     isfloating   monitor layout */
 	{ "zoom",     NULL,       NULL,       1 << 8,       0,           -1,     &layouts[2] },
+	{ "Foxit Reader",NULL,    NULL,       0,            0,           -1,     &layouts[2] },
 };
 
 /* Command to be executed, when swapping the tag.
