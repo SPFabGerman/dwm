@@ -54,8 +54,8 @@
 #define ISVISIBLE(C, M)         ((C->tags & M->tagset[M->seltags]))
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
-#define WIDTH(X)                ((X)->w + 2 * (X)->bw + gappx)
-#define HEIGHT(X)               ((X)->h + 2 * (X)->bw + gappx)
+#define WIDTH(X)                ((X)->w + 2 * (X)->bw + 2*gappx)
+#define HEIGHT(X)               ((X)->h + 2 * (X)->bw + 2*gappx)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 #define XRDB_LOAD_COLOR(R,V)    if (XrmGetResource(xrdb, R, NULL, &type, &value) == True) { \
@@ -237,6 +237,7 @@ static void setfullscreen(Client *c, int fullscreen);
 static void setlayout(const Arg *arg);
 static void setlayoutcustommonitor(const Arg *arg, Monitor *m);
 static void setmfact(const Arg *arg);
+static void setgap(const Arg *arg);
 static void setup(void);
 static void seturgent(Client *c, int urg);
 static void showhide(Client *c);
@@ -316,6 +317,8 @@ static Colormap cmap;
 
 static Clientlist *cl;
 static Pertag *pertagglist;
+
+static unsigned int gappx;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -1485,8 +1488,10 @@ recttomon(int x, int y, int w, int h)
 void
 resize(Client *c, int x, int y, int w, int h, int interact)
 {
-	if (applysizehints(c, &x, &y, &w, &h, interact))
-		resizeclient(c, x, y, w, h);
+	// TODO: Move code for gaps from resizeclient here and uncomment the "if" line. (And remove the extra function call.)
+	// if (applysizehints(c, &x, &y, &w, &h, interact))
+	applysizehints(c, &x, &y, &w, &h, interact);
+	resizeclient(c, x, y, w, h);
 }
 
 void
@@ -1501,17 +1506,17 @@ resizeclient(Client *c, int x, int y, int w, int h)
 	wc.border_width = c->bw;
 
 	/* Get number of clients for the selected monitor */
-	for (n = 0, nbc = nexttiled(selmon->clients); nbc; nbc = nexttiled(nbc->next), n++);
+	for (n = 0, nbc = nexttiled(selmon->cl->clients, selmon); nbc; nbc = nexttiled(nbc->next, selmon), n++);
 
 	/* Do nothing if layout is floating */
 	if (c->isfloating || selmon->lt[selmon->sellt]->arrange == NULL) {
 		gapincr = gapoffset = 0;
 	} else {
-		/* Remove border and gap if layout is monocle or only one client */
 		if (selmon->lt[selmon->sellt]->arrange == monocle || n == 1) {
-			gapoffset = 0;
-			gapincr = -2 * borderpx;
-			wc.border_width = 0;
+			/* This code is executed, when we have the monocle layout or just one client. */
+			gapoffset = gappx;
+			gapincr = 2 * gappx;
+			// wc.border_width = 0;
 		} else {
 			gapoffset = gappx;
 			gapincr = 2 * gappx;
@@ -1832,6 +1837,24 @@ setmfact(const Arg *arg)
 }
 
 void
+setgap(const Arg *arg)
+{
+	int i = arg->i;
+	int t = gappx + i;
+
+	if (i != 0) {
+		if (t > 0)
+			gappx = t;
+		else
+			gappx = 0;
+	} else {
+		gappx = gappx ? 0 : gappxdf;
+	}
+
+	arrange(NULL);
+}
+
+void
 setup(void)
 {
 	int i;
@@ -1862,6 +1885,8 @@ setup(void)
 
 		pertagglist->showbars[i] = showbar;
 	}
+
+	gappx = gappxdf;
 
 	root = RootWindow(dpy, screen);
 	xinitvisual();

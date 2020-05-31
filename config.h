@@ -2,6 +2,8 @@
 
 /* appearance */
 static const unsigned int borderpx  = 2;        /* border pixel of windows */
+/* TODO: Make per Client */
+static const unsigned int gappxdf   = 4;        /* default gaps between windows */
 static const unsigned int snap      = 16;       /* snap pixel */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
@@ -99,6 +101,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
 	{ MODKEY,                       XK_Left,      setmfact,       {.f = -0.05} },
 	{ MODKEY,                       XK_Right,      setmfact,       {.f = +0.05} },
+	{ MODKEY,                       XK_g,          setgap,         {.i = 0 } },
 	{ MODKEY,                       XK_Return, zoom,           {0} }, // Focus Selected
 	{ MODKEY,                       XK_Tab,    view,           {0} }, // Tab betwenn recent Tags
 	{ MODKEY,                       XK_c,      killclient,     {0} },
