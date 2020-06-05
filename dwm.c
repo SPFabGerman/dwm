@@ -1388,12 +1388,12 @@ movemouse(const Arg *arg)
 			ny = ocy + (ev.xmotion.y - y);
 			if (abs(selmon->wx - nx) < snap)
 				nx = selmon->wx;
-			else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c))) < snap)
-				nx = selmon->wx + selmon->ww - WIDTH(c);
+			else if (abs((selmon->wx + selmon->ww) - (nx + WIDTH(c) - 2*gappx)) < snap)
+				nx = selmon->wx + selmon->ww - WIDTH(c) + 2*gappx;
 			if (abs(selmon->wy - ny) < snap)
 				ny = selmon->wy;
-			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c))) < snap)
-				ny = selmon->wy + selmon->wh - HEIGHT(c);
+			else if (abs((selmon->wy + selmon->wh) - (ny + HEIGHT(c) - 2*gappx)) < snap)
+				ny = selmon->wy + selmon->wh - HEIGHT(c) + 2*gappx;
 			if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
 			&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))
 				togglefloating(NULL);
@@ -1840,11 +1840,10 @@ void
 setgap(const Arg *arg)
 {
 	int i = arg->i;
-	int t = gappx + i;
 
 	if (i != 0) {
-		if (t > 0)
-			gappx = t;
+		if (gappx > -i)
+			gappx += i;
 		else
 			gappx = 0;
 	} else {
