@@ -152,7 +152,7 @@ struct Monitor {
 	int showbar;
 	int topbar;
 	Clientlist *cl;
-	Client *sel;
+	Client *sel;	      /* Focused Client */
 	Monitor *next;
 	Window barwin;
 	const Layout *lt[2];
@@ -575,6 +575,18 @@ buttonpress(XEvent *e)
 			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
 }
 
+int
+barwidth(Monitor * m) {
+	if (!simplebar)
+		return m->ww;
+	int w = 0;
+	for (int i = 0; i < LENGTH(tags); i++) {
+		w += TEXTW(tags[i]);
+	}
+	w += TEXTW(m->ltsymbol);
+	return w;
+}
+
 void
 checkotherwm(void)
 {
@@ -687,7 +699,7 @@ configurenotify(XEvent *e)
 				for (c = m->cl->clients; c; c = c->next)
 					if (c->isfullscreen)
 						resizeclient(c, m->mx, m->my, m->mw, m->mh);
-				XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
+				XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, barwidth(m), bh);
 			}
 			focus(NULL);
 			arrange(NULL);
@@ -2103,7 +2115,7 @@ togglebar(const Arg *arg)
 		if(selmon->tagset[selmon->seltags] & 1<<i)
 			selmon->pertag->showbars[(i+1)%(LENGTH(tags)+1)] = selmon->showbar;
 	updatebarpos(selmon);
-	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
+	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, barwidth(selmon), bh);
 	arrange(selmon);
 }
 
@@ -2252,7 +2264,7 @@ updatebars(void)
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, bh, 0, depth,
+		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, barwidth(m), bh, 0, depth,
 		                          InputOutput, visual,
 		                          CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap|CWEventMask, &wa);
 		XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);

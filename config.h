@@ -5,9 +5,10 @@ static const unsigned int borderpx  = 2;        /* border pixel of windows */
 /* TODO: Make per Client */
 static const unsigned int gappxdf   = 4;        /* default gaps between windows */
 static const unsigned int snap      = 16;       /* snap pixel */
-static const int showbar            = 0;        /* 0 means no bar */
+static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
-static const int extrareservedspace = 26;     /* Space at barpos, where no window can be drawn */
+static const int simplebar	    = 1;	/* 1 means only the tags and layout is shown. */
+static const int extrareservedspace = 0;        /* Space at barpos, where no window can be drawn */
 #define MAINFONT "MesloLGS NF:size=10"
 static const char *fonts[]          = { MAINFONT };
 /* TODO: Delete DMENU Stuff */
