@@ -576,7 +576,7 @@ buttonpress(XEvent *e)
 }
 
 int
-barwidth(Monitor * m) {
+calcbarwidth(Monitor * m) {
 	if (!simplebar)
 		return m->ww;
 	int w = 0;
@@ -585,6 +585,16 @@ barwidth(Monitor * m) {
 	}
 	w += TEXTW(m->ltsymbol);
 	return w;
+}
+
+int
+calcbarxoffset(Monitor * m) {
+	return simplebar ? barxoffset + m->wx : m->wx;
+}
+
+int
+calcbaryoffset(Monitor * m) {
+	return simplebar ? baryoffset + m->by : m->by;
 }
 
 void
@@ -699,7 +709,7 @@ configurenotify(XEvent *e)
 				for (c = m->cl->clients; c; c = c->next)
 					if (c->isfullscreen)
 						resizeclient(c, m->mx, m->my, m->mw, m->mh);
-				XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, barwidth(m), bh);
+				XMoveResizeWindow(dpy, m->barwin, calcbarxoffset(m), calcbaryoffset(m), calcbarwidth(m), bh);
 			}
 			focus(NULL);
 			arrange(NULL);
@@ -1927,7 +1937,7 @@ setup(void)
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
 	lrpad = drw->fonts->h;
-	bh = drw->fonts->h + 2;
+	bh = barheight ? barheight : drw->fonts->h + 2;
 	updategeom();
 	/* init atoms */
 	utf8string = XInternAtom(dpy, "UTF8_STRING", False);
@@ -2115,7 +2125,7 @@ togglebar(const Arg *arg)
 		if(selmon->tagset[selmon->seltags] & 1<<i)
 			selmon->pertag->showbars[(i+1)%(LENGTH(tags)+1)] = selmon->showbar;
 	updatebarpos(selmon);
-	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, barwidth(selmon), bh);
+	XMoveResizeWindow(dpy, selmon->barwin, calcbarxoffset(selmon), calcbaryoffset(selmon), calcbarwidth(selmon), bh);
 	arrange(selmon);
 }
 
@@ -2264,7 +2274,7 @@ updatebars(void)
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, barwidth(m), bh, 0, depth,
+		m->barwin = XCreateWindow(dpy, root, calcbarxoffset(m), calcbaryoffset(m), calcbarwidth(m), bh, 0, depth,
 		                          InputOutput, visual,
 		                          CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap|CWEventMask, &wa);
 		XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);
@@ -2282,6 +2292,8 @@ updatebarpos(Monitor *m)
 		m->wh -= bh;
 		m->by = m->topbar ? m->wy : m->wy + m->wh;
 		m->wy = m->topbar ? m->wy + bh + extrareservedspace : m->wy;
+		m->wy += simplebar ? baryoffset : 0;
+		m->wh -= simplebar ? baryoffset : 0;
 	} else {
 		m->by = -bh;
 		m->wy = m->topbar ? m->wy + extrareservedspace : m->wy;
