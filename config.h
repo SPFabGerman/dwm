@@ -68,11 +68,12 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class      instance    title       tags mask     isfloating  isterminal  noswallow   monitor  layout */
-	{ "zoom",     NULL,       NULL,       1 << 8,       0,          0,          0,          -1,      &layouts[2] },
-	{ "Foxit Reader",NULL,    NULL,       0,            0,          0,          0,          -1,      &layouts[2] },
-	{ "st",       NULL,       NULL,       0,            0,          1,          0,          -1,      NULL },
-	{ NULL,       NULL,       "Event Tester",0,         1,          0,          1,          -1,      NULL }, /* xev */
+	/* class      instance    title       tags mask     isfloating  isterminal  noswallow   monitor  layout       resizehints */
+	{ "zoom",     NULL,       NULL,       1 << 8,       0,          0,          0,          -1,      &layouts[2], 0  },
+	{ "Foxit Reader",NULL,    NULL,       0,            0,          0,          0,          -1,      &layouts[2], 0  },
+	{ "st",       NULL,       NULL,       0,            0,          1,          0,          -1,      NULL,        0  },
+	{ NULL,       NULL,       "Event Tester",0,         1,          0,          1,          -1,      NULL,        0  }, /* xev */
+	{ "MPlayer",  NULL,       NULL,       0,            0,          0,          0,          -1,      NULL,        1  },
 };
 
 /* Command to be executed, when swapping the tag.

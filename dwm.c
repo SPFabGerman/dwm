@@ -114,7 +114,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, useresizehints;
 	pid_t pid;
 	Client *next;
 	Client *snext;
@@ -173,6 +173,7 @@ typedef struct {
 	int noswallow;
 	int monitor;
 	const Layout *lt;
+	int overrideresizehints;
 } Rule;
 
 struct Clientlist {
@@ -366,6 +367,7 @@ applyrules(Client *c)
 	Monitor *m;
 	XClassHint ch = { NULL, NULL };
 	const Layout *newLayout = NULL;
+	int overrideresizehints = 0;
 
 	/* rule matching */
 	c->noswallow = -1;
@@ -390,6 +392,8 @@ applyrules(Client *c)
 				c->mon = m;
 			if (r->lt)
 				newLayout = r->lt;
+			if (r->overrideresizehints)
+				overrideresizehints = r->overrideresizehints;
 		}
 	}
 	if (ch.res_class)
@@ -412,6 +416,12 @@ applyrules(Client *c)
 			Arg a = { .v = newLayout };
 			setlayoutcustommonitor(&a, c->mon);
 		}
+	}
+
+	if (overrideresizehints) {
+		c->useresizehints = overrideresizehints == -1 ? 0 : 1;
+	} else {
+		c->useresizehints = resizehints;
 	}
 }
 
@@ -447,7 +457,7 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 		*h = bh;
 	if (*w < bh)
 		*w = bh;
-	if (resizehints || c->isfloating || !c->mon->lt[c->mon->sellt]->arrange) {
+	if (c->useresizehints || c->isfloating || !c->mon->lt[c->mon->sellt]->arrange) {
 		/* see last two sentences in ICCCM 4.1.2.3 */
 		baseismin = c->basew == c->minw && c->baseh == c->minh;
 		if (!baseismin) { /* temporarily remove base dimensions */
