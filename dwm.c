@@ -1605,28 +1605,14 @@ recttomon(int x, int y, int w, int h)
 void
 resize(Client *c, int x, int y, int w, int h, int interact)
 {
-	// TODO: Move code for gaps from resizeclient here and uncomment the "if" line. (And remove the extra function call.)
-	// if (applysizehints(c, &x, &y, &w, &h, interact))
-	applysizehints(c, &x, &y, &w, &h, interact);
-	resizeclient(c, x, y, w, h);
-}
-
-void
-resizeclient(Client *c, int x, int y, int w, int h)
-{
-	XWindowChanges wc;
-	unsigned int n;
-	unsigned int gapoffset;
-	unsigned int gapincr;
+	unsigned int gapoffset, gapincr, n;
 	Client *nbc;
-
-	wc.border_width = c->bw;
 
 	/* Get number of clients for the selected monitor */
 	for (n = 0, nbc = nexttiled(selmon->cl->clients, selmon); nbc; nbc = nexttiled(nbc->next, selmon), n++);
 
-	/* Do nothing if layout is floating */
-	if (c->isfloating || selmon->lt[selmon->sellt]->arrange == NULL) {
+	/* Calculate Gaps */
+	if (c->isfloating || interact || selmon->lt[selmon->sellt]->arrange == NULL) {
 		gapincr = gapoffset = 0;
 	} else {
 		if (selmon->lt[selmon->sellt]->arrange == monocle || n == 1) {
@@ -1640,10 +1626,25 @@ resizeclient(Client *c, int x, int y, int w, int h)
 		}
 	}
 
-	c->oldx = c->x; c->x = wc.x = x + gapoffset;
-	c->oldy = c->y; c->y = wc.y = y + gapoffset;
-	c->oldw = c->w; c->w = wc.width = w - gapincr;
-	c->oldh = c->h; c->h = wc.height = h - gapincr;
+	x += gapoffset;
+	y += gapoffset;
+	w -= gapincr;
+	h -= gapincr;
+
+	if (applysizehints(c, &x, &y, &w, &h, interact))
+		resizeclient(c, x, y, w, h);
+}
+
+void
+resizeclient(Client *c, int x, int y, int w, int h)
+{
+	XWindowChanges wc;
+	wc.border_width = c->bw;
+
+	c->oldx = c->x; c->x = wc.x = x;
+	c->oldy = c->y; c->y = wc.y = y;
+	c->oldw = c->w; c->w = wc.width = w;
+	c->oldh = c->h; c->h = wc.height = h;
 
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);

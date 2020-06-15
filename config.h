@@ -73,7 +73,7 @@ static const Rule rules[] = {
 	{ "Foxit Reader",NULL,    NULL,       0,            0,          0,          0,          -1,      &layouts[2], 0  },
 	{ "st",       NULL,       NULL,       0,            0,          1,          0,          -1,      NULL,        0  },
 	{ NULL,       NULL,       "Event Tester",0,         1,          0,          1,          -1,      NULL,        0  }, /* xev */
-	{ "MPlayer",  NULL,       NULL,       0,            0,          0,          0,          -1,      NULL,        1  },
+	{ "MPlayer",  NULL,       NULL,       0,            0,          0,          0,          -1,      NULL,        1  }, /* for webcam */
 };
 
 /* Command to be executed, when swapping the tag.
