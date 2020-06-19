@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <math.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <X11/cursorfont.h>
@@ -2627,16 +2626,17 @@ view(const Arg *arg)
 	int i;
 	unsigned int tmptag;
 
-	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
-		return;
-
-	/* Get Highest Selected Tag */
-	int htag = (int) (log(arg->ui)/log(2));
+	/* Get Lowest Selected Tag */
+	int ltag;
+	for (ltag = 0; !(arg->ui & (1<<ltag)) && ltag < TAGSLENGTH; ltag++);
 	/* Change Command Number */
-	tagswap_cmd_number[0] = '1' + htag;
+	tagswap_cmd_number[0] = '1' + ltag;
 	/* Spawn the actual Command */
 	const Arg a = { .v = tagswap_cmd };
-	spawn( &a );
+	spawn(&a);
+
+	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
+		return;
 	
 	/* swap tags when trying to display a tag from another monitor */
 	if(arg->ui & TAGMASK)
@@ -2653,7 +2653,7 @@ view(const Arg *arg)
 
 			/* Find lowest Tag to swap. */
 			for (i = 0; !(m->tagset[m->seltags] & 1 << i); i++) ;
-			int ltag = i + 1;
+			ltag = i + 1;
 
 			/* Apply all changes, based on this lowest tag. */
 			m->nmaster = m->pertag->nmasters[ltag];
