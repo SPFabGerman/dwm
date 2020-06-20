@@ -1604,31 +1604,30 @@ recttomon(int x, int y, int w, int h)
 void
 resize(Client *c, int x, int y, int w, int h, int interact)
 {
-	unsigned int gapoffset, gapincr, n;
+	unsigned int currgap, n;
 	Client *nbc;
+	Monitor * m = c->mon;
 
 	/* Get number of clients for the selected monitor */
-	for (n = 0, nbc = nexttiled(selmon->cl->clients, selmon); nbc; nbc = nexttiled(nbc->next, selmon), n++);
+	for (n = 0, nbc = nexttiled(m->cl->clients, m); nbc; nbc = nexttiled(nbc->next, m), n++);
 
 	/* Calculate Gaps */
-	if (c->isfloating || interact || selmon->lt[selmon->sellt]->arrange == NULL) {
-		gapincr = gapoffset = 0;
+	if (c->isfloating || interact || m->lt[m->sellt]->arrange == NULL) {
+		currgap = 0;
 	} else {
-		if (selmon->lt[selmon->sellt]->arrange == monocle || n == 1) {
+		if (m->lt[m->sellt]->arrange == monocle || n == 1) {
 			/* This code is executed, when we have the monocle layout or just one client. */
-			gapoffset = gappx;
-			gapincr = 2 * gappx;
-			// wc.border_width = 0;
+			currgap = gappx;
+			// c.bw = 0;
 		} else {
-			gapoffset = gappx;
-			gapincr = 2 * gappx;
+			currgap = gappx;
 		}
 	}
 
-	x += gapoffset;
-	y += gapoffset;
-	w -= gapincr;
-	h -= gapincr;
+	x += currgap;
+	y += currgap;
+	w -= currgap * 2;
+	h -= currgap * 2;
 
 	if (applysizehints(c, &x, &y, &w, &h, interact))
 		resizeclient(c, x, y, w, h);
@@ -2622,8 +2621,9 @@ void
 view(const Arg *arg)
 {
 	Monitor *m;
+	Client *c;
 	unsigned int newtagset = selmon->tagset[selmon->seltags ^ 1];
-	int i;
+	int i, n;
 	unsigned int tmptag;
 
 	/* Get Lowest Selected Tag */
@@ -2634,6 +2634,23 @@ view(const Arg *arg)
 	/* Spawn the actual Command */
 	const Arg a = { .v = tagswap_cmd };
 	spawn(&a);
+
+	/* Count number of clients on current tag and reset layout, if no clients are on current tag. */
+	for (i = 0; i < TAGSLENGTH; i++) {
+		if (1 << i & selmon->tagset[selmon->seltags]) {
+			n = 0;
+			for (c = nexttiled(selmon->cl->clients, selmon); c; c = nexttiled(c->next, selmon)) {
+				if (c->tags & 1 << i) {
+					n++;
+				}
+			}
+			if (n == 0) {
+				selmon->pertag->nmasters[i+1] = 1;
+				selmon->pertag->mfacts[i+1] = mfact;
+				selmon->pertag->ltidxs[i+1][selmon->sellt] = &layouts[0];
+			}
+		}
+	}
 
 	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
 		return;
