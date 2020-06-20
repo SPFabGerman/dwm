@@ -2635,23 +2635,6 @@ view(const Arg *arg)
 	const Arg a = { .v = tagswap_cmd };
 	spawn(&a);
 
-	/* Count number of clients on current tag and reset layout, if no clients are on current tag. */
-	for (i = 0; i < TAGSLENGTH; i++) {
-		if (1 << i & selmon->tagset[selmon->seltags]) {
-			n = 0;
-			for (c = nexttiled(selmon->cl->clients, selmon); c; c = nexttiled(c->next, selmon)) {
-				if (c->tags & 1 << i) {
-					n++;
-				}
-			}
-			if (n == 0) {
-				selmon->pertag->nmasters[i+1] = 1;
-				selmon->pertag->mfacts[i+1] = mfact;
-				selmon->pertag->ltidxs[i+1][selmon->sellt] = &layouts[0];
-			}
-		}
-	}
-
 	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
 		return;
 	
@@ -2696,9 +2679,30 @@ view(const Arg *arg)
 			selmon->pertag->curtag = i + 1;
 		}
 	} else {
+		/* Swap to prev tag. 
+		 * (See also seltags ^= 1 instruction above) */
 		tmptag = selmon->pertag->prevtag;
 		selmon->pertag->prevtag = selmon->pertag->curtag;
 		selmon->pertag->curtag = tmptag;
+	}
+
+	attachclients(selmon); /* Move clients over to new tag. */
+
+	/* Count number of clients on new tag and reset layout, if no clients are on new tag. */
+	for (i = 0; i < TAGSLENGTH; i++) {
+		if (1 << i & selmon->tagset[selmon->seltags]) {
+			n = 0;
+			for (c = nexttiled(selmon->cl->clients, selmon); c; c = nexttiled(c->next, selmon)) {
+				if (c->tags & 1 << i) {
+					n++;
+				}
+			}
+			if (n == 0) {
+				selmon->pertag->nmasters[i+1] = 1;
+				selmon->pertag->mfacts[i+1] = mfact;
+				selmon->pertag->ltidxs[i+1][selmon->pertag->sellts[i+1]] = &layouts[0];
+			}
+		}
 	}
 
 	selmon->nmaster = selmon->pertag->nmasters[selmon->pertag->curtag];
@@ -2710,11 +2714,7 @@ view(const Arg *arg)
 	if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
 		togglebar(NULL);
 
-	/* TODO: Reihenfole prüfen. So hier scheint das richtig zu sein,
-	 * aber der single Tagset Patch führt attachclients() nach focus() aus. */
-	attachclients(selmon);
-	focus(NULL);
-	/* TODO: Maybe remove arrange here? (Is deleted by the newest version of single tagset patch.) */
+	focus(NULL); /* Focus first client */
 	arrange(selmon);
 	updatecurrentdesktop();
 }
