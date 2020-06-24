@@ -21,7 +21,7 @@ tcl(Monitor * m)
 	       m->wy,
 	       n == 1 ? m->ww - bdw : mw - bdw,
 	       m->wh - bdw,
-	       False);
+	       False, 1);
 
 	if (--n == 0)
 		return;
@@ -45,7 +45,7 @@ tcl(Monitor * m)
 			       y,
 			       w - bdw,
 			       (i + 1 == n / 2) ? m->wy + m->wh - y - bdw : h - bdw,
-			       False);
+			       False, 1);
 
 			if (h != m->wh)
 				y = c->y + HEIGHT(c);
@@ -67,7 +67,7 @@ tcl(Monitor * m)
 		       y,
 		       (i + 1 == (n + 1) / 2) ? w - bdw : w - bdw,
 		       (i + 1 == (n + 1) / 2) ? m->wy + m->wh - y - bdw : h - bdw,
-		       False);
+		       False, 1);
 
 		if (h != m->wh)
 			y = c->y + HEIGHT(c);

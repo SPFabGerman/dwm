@@ -113,7 +113,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, useresizehints;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, useresizehints, animate;
 	pid_t pid;
 	Client *next;
 	Client *snext;
@@ -181,6 +181,7 @@ struct Clientlist {
 };
 
 /* function declarations */
+static void animateclient(Client *c, int x, int y, int w, int h);
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
 static void arrange(Monitor *m);
@@ -230,7 +231,7 @@ static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
 static Monitor *recttomon(int x, int y, int w, int h);
-static void resize(Client *c, int x, int y, int w, int h, int interact);
+static void resize(Client *c, int x, int y, int w, int h, int interact, int animate);
 static void resizeclient(Client *c, int x, int y, int w, int h);
 static void resizemouse(const Arg *arg);
 static void restack(Monitor *m);
@@ -356,6 +357,25 @@ struct Pertag {
 /* compile-time check if all tags fit into an unsigned int bit array. */
 struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 
+void
+animateclient(Client *c, int x, int y, int w, int h)
+{
+	int oldx = c->x;
+	int oldy = c->y;
+	int oldw = c->w;
+	int oldh = c->h;
+	int frame;
+
+	for (frame = 0; frame < animationframes; frame++) {
+		double ratio = (double) frame / animationframes;
+		resizeclient(c, oldx + ratio * (x - oldx), oldy + ratio * (y - oldy),
+				oldw + ratio * (w - oldw), oldh + ratio * (h - oldh) );
+		usleep(framedur);
+	}
+
+	resizeclient(c, x, y, w, h);
+}
+
 /* function implementations */
 void
 applyrules(Client *c)
@@ -372,6 +392,7 @@ applyrules(Client *c)
 	c->noswallow = -1;
 	c->isfloating = 0;
 	c->tags = 0;
+	c->animate = 1;
 	XGetClassHint(dpy, c->win, &ch);
 	class    = ch.res_class ? ch.res_class : broken;
 	instance = ch.res_name  ? ch.res_name  : broken;
@@ -1446,7 +1467,7 @@ monocle(Monitor *m)
 	if (n > 0) /* override layout symbol */
 		snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
 	for (c = nexttiled(m->cl->clients, m); c; c = nexttiled(c->next, m))
-		resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0);
+		resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0, 1);
 }
 
 void
@@ -1514,7 +1535,7 @@ movemouse(const Arg *arg)
 			&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))
 				togglefloating(NULL);
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
-				resize(c, nx, ny, c->w, c->h, 1);
+				resize(c, nx, ny, c->w, c->h, 1, 0);
 			break;
 		}
 	} while (ev.type != ButtonRelease);
@@ -1602,7 +1623,7 @@ recttomon(int x, int y, int w, int h)
 }
 
 void
-resize(Client *c, int x, int y, int w, int h, int interact)
+resize(Client *c, int x, int y, int w, int h, int interact, int animate)
 {
 	unsigned int currgap, n;
 	Client *nbc;
@@ -1629,8 +1650,13 @@ resize(Client *c, int x, int y, int w, int h, int interact)
 	w -= currgap * 2;
 	h -= currgap * 2;
 
-	if (applysizehints(c, &x, &y, &w, &h, interact))
-		resizeclient(c, x, y, w, h);
+	if (applysizehints(c, &x, &y, &w, &h, interact)){
+		if (animate && c->animate && useanimation && !interact) {
+			animateclient(c, x, y, w, h);
+		} else {
+			resizeclient(c, x, y, w, h);
+		}
+	}
 }
 
 void
@@ -1711,7 +1737,7 @@ resizemouse(const Arg *arg)
 					togglefloating(NULL);
 			}
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
-				resize(c, nx, ny, nw, nh, 1);
+				resize(c, nx, ny, nw, nh, 1, 0);
 			break;
 		}
 	} while (ev.type != ButtonRelease);
@@ -2117,7 +2143,7 @@ showhide(Client *c)
 		/* show clients top down */
 		XMoveWindow(dpy, c->win, c->x, c->y);
 		if ((!c->mon->lt[c->mon->sellt]->arrange || c->isfloating) && !c->isfullscreen)
-			resize(c, c->x, c->y, c->w, c->h, 0);
+			resize(c, c->x, c->y, c->w, c->h, 0, 0);
 		showhide(c->snext);
 	} else {
 		/* hide clients bottom up */
@@ -2200,11 +2226,11 @@ tile(Monitor *m)
 	for (i = my = ty = 0, c = nexttiled(m->cl->clients, m); c; c = nexttiled(c->next, m), i++)
 		if (i < m->nmaster) {
 			h = (m->wh - my) / (MIN(n, m->nmaster) - i);
-			resize(c, m->wx, m->wy + my, mw - (2*c->bw), h - (2*c->bw), 0);
+			resize(c, m->wx, m->wy + my, mw - (2*c->bw), h - (2*c->bw), 0, 1);
 			my += HEIGHT(c);
 		} else {
 			h = (m->wh - ty) / (n - i);
-			resize(c, m->wx + mw, m->wy + ty, m->ww - mw - (2*c->bw), h - (2*c->bw), 0);
+			resize(c, m->wx + mw, m->wy + ty, m->ww - mw - (2*c->bw), h - (2*c->bw), 0, 1);
 			ty += HEIGHT(c);
 		}
 }
@@ -2232,7 +2258,7 @@ togglefloating(const Arg *arg)
 	selmon->sel->isfloating = !selmon->sel->isfloating || selmon->sel->isfixed;
 	if (selmon->sel->isfloating)
 		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
-			selmon->sel->w, selmon->sel->h, 0);
+			selmon->sel->w, selmon->sel->h, 0, 0);
 	arrange(selmon);
 }
 
@@ -3028,11 +3054,11 @@ bstack(Monitor *m) {
 	for (i = mx = 0, tx = m->wx, c = nexttiled(m->cl->clients, m); c; c = nexttiled(c->next, m), i++) {
 		if (i < m->nmaster) {
 			w = (m->ww - mx) / (MIN(n, m->nmaster) - i);
-			resize(c, m->wx + mx, m->wy, w - (2 * c->bw), mh - (2 * c->bw), 0);
+			resize(c, m->wx + mx, m->wy, w - (2 * c->bw), mh - (2 * c->bw), 0, 1);
 			mx += WIDTH(c);
 		} else {
 			h = m->wh - mh;
-			resize(c, tx, ty, tw - (2 * c->bw), h - (2 * c->bw), 0);
+			resize(c, tx, ty, tw - (2 * c->bw), h - (2 * c->bw), 0, 1);
 			if (tw != m->ww)
 				tx += WIDTH(c);
 		}
@@ -3059,10 +3085,10 @@ bstackhoriz(Monitor *m) {
 	for (i = mx = 0, tx = m->wx, c = nexttiled(m->cl->clients, m); c; c = nexttiled(c->next, m), i++) {
 		if (i < m->nmaster) {
 			w = (m->ww - mx) / (MIN(n, m->nmaster) - i);
-			resize(c, m->wx + mx, m->wy, w - (2 * c->bw), mh - (2 * c->bw), 0);
+			resize(c, m->wx + mx, m->wy, w - (2 * c->bw), mh - (2 * c->bw), 0, 1);
 			mx += WIDTH(c);
 		} else {
-			resize(c, tx, ty, m->ww - (2 * c->bw), th - (2 * c->bw), 0);
+			resize(c, tx, ty, m->ww - (2 * c->bw), th - (2 * c->bw), 0, 1);
 			if (th != m->wh)
 				ty += HEIGHT(c);
 		}
