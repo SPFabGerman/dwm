@@ -40,6 +40,7 @@
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
 #endif /* XINERAMA */
+#include <X11/extensions/shape.h>
 #include <X11/Xft/Xft.h>
 #include <X11/Xlib-xcb.h>
 #include <xcb/res.h>
@@ -288,6 +289,9 @@ static void xrdb(const Arg *arg);
 static void zoom(const Arg *arg);
 static void bstack(Monitor *m);
 static void bstackhoriz(Monitor *m);
+static void roundcorners(Client *c);
+static void roundcornerswin(Window * win, int w, int h);
+static void unroundcorners(Client *c);
 
 static pid_t getparentprocess(pid_t p);
 static int isdescprocess(pid_t p, pid_t c);
@@ -812,6 +816,7 @@ configurenotify(XEvent *e)
 					if (c->isfullscreen)
 						resizeclient(c, m->mx, m->my, m->mw, m->mh);
 				XMoveResizeWindow(dpy, m->barwin, calcbarxoffset(m), calcbaryoffset(m), calcbarwidth(m), bh);
+				roundcornerswin(&(m->barwin), calcbarwidth(m), bh);
 			}
 			focus(NULL);
 			arrange(NULL);
@@ -1425,6 +1430,11 @@ manage(Window w, XWindowAttributes *wa)
 		unfocus(selmon->sel, 0);
 	c->mon->sel = c;
 	arrange(c->mon);
+
+	/* TOOD: Maybe not needed here, since it is already done in arrange?
+	 * (Unless it is floating.) */
+	roundcorners(c);
+
 	XMapWindow(dpy, c->win);
 	if (term)
 		swallow(term, c);
@@ -1657,6 +1667,8 @@ resize(Client *c, int x, int y, int w, int h, int interact, int animate)
 			resizeclient(c, x, y, w, h);
 		}
 	}
+
+	roundcorners(c);
 }
 
 void
@@ -1778,6 +1790,80 @@ restack(Monitor *m)
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
 	if (m == selmon && (m->tagset[m->seltags] & m->sel->tags) && selmon->lt[selmon->sellt] != &layouts[2])
 		warp(m->sel);
+}
+
+void
+roundcorners(Client *c)
+{
+	if (!c || c->isfullscreen)
+		return;
+
+	roundcornerswin(&(c->win), c->w, c->h);
+}
+
+void roundcornerswin(Window * win, int w, int h)
+{
+	int diam;
+	Pixmap mask;
+	GC shapegc;
+
+	if (CORNER_RADIUS <= 0)
+		return;
+
+	diam = 2 * CORNER_RADIUS;
+	if (w < diam || h < diam)
+		return;
+	
+	if (!(mask = XCreatePixmap(dpy, *win, w, h, 1)))
+		return;
+	
+	if (!(shapegc = XCreateGC(dpy, mask, 0, NULL))){
+	    XFreePixmap(dpy, mask);
+	    free(shapegc);
+	    return;
+	}
+
+	XFillRectangle(dpy, mask, shapegc, 0, 0, w, h);
+	XSetForeground(dpy, shapegc, 1);
+
+	/* topleft, topright, bottomleft, bottomright
+	 * man XArc - positive is counterclockwise
+	 */
+	XFillArc(dpy, mask, shapegc, 0,	0, diam, diam, 90 * 64, 90 * 64);
+	XFillArc(dpy, mask, shapegc, w - diam - 1, 0, diam, diam, 0 * 64, 90 * 64);
+	XFillArc(dpy, mask, shapegc, 0,	h - diam - 1, diam, diam, -90 * 64, -90 * 64);
+	XFillArc(dpy, mask, shapegc, w - diam - 1, h - diam - 1, diam, diam, 0 * 64, -90 * 64);
+
+	XFillRectangle(dpy, mask, shapegc, CORNER_RADIUS, 0, w - diam, h);
+	XFillRectangle(dpy, mask, shapegc, 0, CORNER_RADIUS, w, h - diam);
+	XShapeCombineMask(dpy, *win, ShapeBounding, 0, 0, mask, ShapeSet);
+	XFreePixmap(dpy, mask);
+	XFreeGC(dpy, shapegc);
+}
+
+void
+unroundcorners(Client *c)
+{
+	Pixmap mask;
+	GC shapegc;
+
+	if (CORNER_RADIUS < 0 || !c)
+		return;
+
+	if (!(mask = XCreatePixmap(dpy, c->win, c->w, c->h, 1)))
+		return;
+	
+	if (!(shapegc = XCreateGC(dpy, mask, 0, NULL))){
+	    XFreePixmap(dpy, mask);
+	    free(shapegc);
+	    return;
+	}
+
+	XSetForeground(dpy, shapegc, 1);
+	XFillRectangle(dpy, mask, shapegc, 0, 0, c->w, c->h);
+	XShapeCombineMask(dpy, c->win, ShapeBounding, 0, 0, mask, ShapeSet);
+	XFreePixmap(dpy, mask);
+	XFreeGC(dpy, shapegc);
 }
 
 void
@@ -2245,6 +2331,7 @@ togglebar(const Arg *arg)
 			selmon->pertag->showbars[(i+1)%(LENGTH(tags)+1)] = selmon->showbar;
 	updatebarpos(selmon);
 	XMoveResizeWindow(dpy, selmon->barwin, calcbarxoffset(selmon), calcbaryoffset(selmon), calcbarwidth(selmon), bh);
+	roundcornerswin(&(selmon->barwin), calcbarwidth(selmon), bh);
 	arrange(selmon);
 }
 
@@ -2416,6 +2503,7 @@ updatebars(void)
 		XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);
 		XMapRaised(dpy, m->barwin);
 		XSetClassHint(dpy, m->barwin, &ch);
+		roundcornerswin(&(m->barwin), calcbarwidth(m), bh);
 	}
 }
 
