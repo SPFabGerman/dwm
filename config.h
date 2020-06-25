@@ -2,7 +2,7 @@
 
 /* appearance */
 static const unsigned int borderpx  = 2;        /* border pixel of windows */
-static const int CORNER_RADIUS      = 4;
+static const int cornerradius       = 4;
 /* TODO: Make per Client */
 static const unsigned int gappxdf   = 4;        /* default gaps between windows */
 static const unsigned int snap      = 16;       /* snap pixel */

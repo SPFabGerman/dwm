@@ -289,8 +289,9 @@ static void xrdb(const Arg *arg);
 static void zoom(const Arg *arg);
 static void bstack(Monitor *m);
 static void bstackhoriz(Monitor *m);
-static void roundcorners(Client *c);
-static void roundcornerswin(Window * win, int w, int h);
+static void roundcornersclient(Client *c);
+static void roundcornersbar(Monitor *mon);
+static int createroundcornermask(Pixmap * maskP, GC * shapegcP, Window win, int w, int h, int radius);
 static void unroundcorners(Client *c);
 
 static pid_t getparentprocess(pid_t p);
@@ -816,7 +817,7 @@ configurenotify(XEvent *e)
 					if (c->isfullscreen)
 						resizeclient(c, m->mx, m->my, m->mw, m->mh);
 				XMoveResizeWindow(dpy, m->barwin, calcbarxoffset(m), calcbaryoffset(m), calcbarwidth(m), bh);
-				roundcornerswin(&(m->barwin), calcbarwidth(m), bh);
+				roundcornersbar(m);
 			}
 			focus(NULL);
 			arrange(NULL);
@@ -1431,9 +1432,9 @@ manage(Window w, XWindowAttributes *wa)
 	c->mon->sel = c;
 	arrange(c->mon);
 
-	/* TOOD: Maybe not needed here, since it is already done in arrange?
+	/* TODO: Maybe not needed here, since it is already done in arrange?
 	 * (Unless it is floating.) */
-	roundcorners(c);
+	roundcornersclient(c);
 
 	XMapWindow(dpy, c->win);
 	if (term)
@@ -1667,8 +1668,6 @@ resize(Client *c, int x, int y, int w, int h, int interact, int animate)
 			resizeclient(c, x, y, w, h);
 		}
 	}
-
-	roundcorners(c);
 }
 
 void
@@ -1685,6 +1684,8 @@ resizeclient(Client *c, int x, int y, int w, int h)
 	XConfigureWindow(dpy, c->win, CWX|CWY|CWWidth|CWHeight|CWBorderWidth, &wc);
 	configure(c);
 	XSync(dpy, False);
+
+	roundcornersclient(c);
 }
 
 void
@@ -1793,35 +1794,65 @@ restack(Monitor *m)
 }
 
 void
-roundcorners(Client *c)
+roundcornersclient(Client *c)
 {
+	Pixmap mask;
+	GC shapegc;
 	if (!c || c->isfullscreen)
 		return;
 
-	roundcornerswin(&(c->win), c->w, c->h);
+	/* Create Border Mask */
+	if (createroundcornermask(&mask, &shapegc, c->win, c->w + 2*c->bw, c->h + 2*c->bw, cornerradius + c->bw) == 0) {
+		XShapeCombineMask(dpy, c->win, ShapeBounding, -c->bw, -c->bw, mask, ShapeSet);
+		XFreePixmap(dpy, mask);
+		XFreeGC(dpy, shapegc);
+	}
+
+	/* Create Clip Mask */
+	if (createroundcornermask(&mask, &shapegc, c->win, c->w, c->h, cornerradius) == 0) {
+		XShapeCombineMask(dpy, c->win, ShapeClip, 0, 0, mask, ShapeSet);
+		XFreePixmap(dpy, mask);
+		XFreeGC(dpy, shapegc);
+	}
 }
 
-void roundcornerswin(Window * win, int w, int h)
+void
+roundcornersbar(Monitor * mon)
 {
-	int diam;
 	Pixmap mask;
 	GC shapegc;
+	if (createroundcornermask(&mask, &shapegc, mon->barwin, calcbarwidth(mon), bh, cornerradius) == 0) {
+		XShapeCombineMask(dpy, mon->barwin, ShapeBounding, 0, 0, mask, ShapeSet);
+		XFreePixmap(dpy, mask);
+		XFreeGC(dpy, shapegc);
+	}
+}
 
-	if (CORNER_RADIUS <= 0)
-		return;
+int
+createroundcornermask(Pixmap * maskP, GC * shapegcP, Window win, int w, int h, int radius)
+{
+	Pixmap mask;
+	GC shapegc;
+	int diam;
 
-	diam = 2 * CORNER_RADIUS;
+	if (radius <= 0)
+		return 1;
+
+	diam = 2 * radius;
 	if (w < diam || h < diam)
-		return;
+		return 1;
 	
-	if (!(mask = XCreatePixmap(dpy, *win, w, h, 1)))
-		return;
+	if (!(mask = XCreatePixmap(dpy, win, w, h, 1)))
+		return 1;
 	
 	if (!(shapegc = XCreateGC(dpy, mask, 0, NULL))){
 	    XFreePixmap(dpy, mask);
 	    free(shapegc);
-	    return;
+	    return 1;
 	}
+
+	*maskP = mask;
+	*shapegcP = shapegc;
 
 	XFillRectangle(dpy, mask, shapegc, 0, 0, w, h);
 	XSetForeground(dpy, shapegc, 1);
@@ -1834,20 +1865,21 @@ void roundcornerswin(Window * win, int w, int h)
 	XFillArc(dpy, mask, shapegc, 0,	h - diam - 1, diam, diam, -90 * 64, -90 * 64);
 	XFillArc(dpy, mask, shapegc, w - diam - 1, h - diam - 1, diam, diam, 0 * 64, -90 * 64);
 
-	XFillRectangle(dpy, mask, shapegc, CORNER_RADIUS, 0, w - diam, h);
-	XFillRectangle(dpy, mask, shapegc, 0, CORNER_RADIUS, w, h - diam);
-	XShapeCombineMask(dpy, *win, ShapeBounding, 0, 0, mask, ShapeSet);
-	XFreePixmap(dpy, mask);
-	XFreeGC(dpy, shapegc);
+	XFillRectangle(dpy, mask, shapegc, radius, 0, w - diam, h);
+	XFillRectangle(dpy, mask, shapegc, 0, radius, w, h - diam);
+
+	return 0;
 }
 
 void
 unroundcorners(Client *c)
 {
+	/* TODO: Rework to fit counterpart.
+	 * Or even better: implement in counterpart, if radius == 0. */
 	Pixmap mask;
 	GC shapegc;
 
-	if (CORNER_RADIUS < 0 || !c)
+	if (!c)
 		return;
 
 	if (!(mask = XCreatePixmap(dpy, c->win, c->w, c->h, 1)))
@@ -2331,7 +2363,7 @@ togglebar(const Arg *arg)
 			selmon->pertag->showbars[(i+1)%(LENGTH(tags)+1)] = selmon->showbar;
 	updatebarpos(selmon);
 	XMoveResizeWindow(dpy, selmon->barwin, calcbarxoffset(selmon), calcbaryoffset(selmon), calcbarwidth(selmon), bh);
-	roundcornerswin(&(selmon->barwin), calcbarwidth(selmon), bh);
+	roundcornersbar(selmon);
 	arrange(selmon);
 }
 
@@ -2503,7 +2535,7 @@ updatebars(void)
 		XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);
 		XMapRaised(dpy, m->barwin);
 		XSetClassHint(dpy, m->barwin, &ch);
-		roundcornerswin(&(m->barwin), calcbarwidth(m), bh);
+		roundcornersbar(m);
 	}
 }
 
