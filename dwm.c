@@ -114,7 +114,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, useresizehints, animate;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, useresizehints, animate, hasroundcorners;
 	pid_t pid;
 	Client *next;
 	Client *snext;
@@ -174,6 +174,7 @@ typedef struct {
 	int monitor;
 	const Layout *lt;
 	int overrideresizehints;
+	int roundcorners;
 } Rule;
 
 struct Clientlist {
@@ -396,6 +397,7 @@ applyrules(Client *c)
 	/* rule matching */
 	c->noswallow = -1;
 	c->isfloating = 0;
+	c->hasroundcorners = 1;
 	c->tags = 0;
 	c->animate = 1;
 	XGetClassHint(dpy, c->win, &ch);
@@ -411,6 +413,7 @@ applyrules(Client *c)
 			c->isterminal = r->isterminal;
 			c->noswallow  = r->noswallow;
 			c->isfloating = r->isfloating;
+			c->hasroundcorners = r->roundcorners <= -1 ? 0 : 1;
 			c->tags |= r->tags;
 			for (m = mons; m && (m->tagset[m->seltags] & c->tags) == 0; m = m->next) ;
 			if (m)
@@ -1798,7 +1801,12 @@ roundcornersclient(Client *c)
 {
 	Pixmap mask;
 	GC shapegc;
-	if (!c || c->isfullscreen)
+
+	// if (!c || c->isfullscreen)
+	if (!c || !(c->win))
+		return;
+
+	if (c->hasroundcorners == 0)
 		return;
 
 	/* Create Border Mask */
@@ -1834,12 +1842,19 @@ createroundcornermask(Pixmap * maskP, GC * shapegcP, Window win, int w, int h, i
 	Pixmap mask;
 	GC shapegc;
 	int diam;
+	XWindowAttributes xwa;
 
 	if (radius <= 0)
 		return 1;
 
 	diam = 2 * radius;
 	if (w < diam || h < diam)
+		return 1;
+
+	/* Test and return immediatly, if the window does not exist anymore.
+	 * (And prey, it does not get destroyed, while this function is running.) 
+	 * TODO: Maybe, silently ignore all errors. */
+	if (!(XGetWindowAttributes(dpy, win, &xwa)))
 		return 1;
 	
 	if (!(mask = XCreatePixmap(dpy, win, w, h, 1)))
