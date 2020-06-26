@@ -2064,6 +2064,11 @@ setlayout(const Arg *arg)
 			selmon->pertag->sellts[(i+1)%(LENGTH(tags)+1)] = selmon->sellt;
 		}
 
+	if (selmon->pertag->curtag == 0) {
+		selmon->pertag->sellts[0] ^= 1;
+		selmon->pertag->ltidxs[0][selmon->pertag->sellts[0]] = selmon->lt[selmon->sellt];
+	}
+
 	if (selmon->sel)
 		arrange(selmon);
 	else
@@ -2771,7 +2776,7 @@ view(const Arg *arg)
 	Monitor *m;
 	Client *c;
 	unsigned int newtagset = selmon->tagset[selmon->seltags ^ 1];
-	int i, n;
+	int i, n, tagcount;
 	unsigned int tmptag;
 
 	/* Get Lowest Selected Tag */
@@ -2793,8 +2798,14 @@ view(const Arg *arg)
 		if(m != selmon && newtagset & m->tagset[m->seltags]) {
 			/* prevent displaying all tags (MODKEY-0) when multiple monitors
 			 * are connected */
-			if(newtagset & selmon->tagset[selmon->seltags])
-				return;
+			if(newtagset & selmon->tagset[selmon->seltags]) {
+				/* When the new tagset is currently distributes over each monitor:
+				 * remove the overlapping tags. */
+				// TODO: Optimize the criteria for all of this stuff.
+				newtagset &= ~m->tagset[m->seltags];
+
+				continue;
+			}
 			m->sel = selmon->sel;
 			m->seltags ^= 1;
 			m->tagset[m->seltags] = selmon->tagset[selmon->seltags];
@@ -2812,23 +2823,30 @@ view(const Arg *arg)
 
 			attachclients(m);
 			arrange(m);
+
+			/* TODO: Check if this still works for > 2 Monitors. */
 			break;
 		}
 
 	selmon->seltags ^= 1; /* toggle sel tagset */
 	if (arg->ui & TAGMASK) {
-		selmon->tagset[selmon->seltags] = arg->ui & TAGMASK;
+		selmon->tagset[selmon->seltags] = newtagset;
 		selmon->pertag->prevtag = selmon->pertag->curtag;
 
-		if (arg->ui == ~0)
+		for (tagcount = 0, i = 0; i < TAGSLENGTH; i++) {
+			if (newtagset & (1 << i))
+				tagcount++;
+		}
+		if (tagcount > 1) {  
 			selmon->pertag->curtag = 0;
-		else {
+		} else {
 			for (i = 0; !(arg->ui & 1 << i); i++) ;
 			selmon->pertag->curtag = i + 1;
 		}
 	} else {
 		/* Swap to prev tag. 
 		 * (See also seltags ^= 1 instruction above) */
+		// TODO: Remove all these tabbed tags, they make things only more complex!
 		tmptag = selmon->pertag->prevtag;
 		selmon->pertag->prevtag = selmon->pertag->curtag;
 		selmon->pertag->curtag = tmptag;
