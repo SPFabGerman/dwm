@@ -2912,6 +2912,8 @@ view(const Arg *arg)
 void
 viewselected(const Arg * a)
 {
+	if (!selmon->sel)
+		return;
 	const Arg viewarg = {.ui = selmon->sel->tags};
 	view(&viewarg);
 }
