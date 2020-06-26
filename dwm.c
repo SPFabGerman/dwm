@@ -114,7 +114,9 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
-	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen, isterminal, noswallow, useresizehints, animate, hasroundcorners;
+	int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen,
+	    isterminal, noswallow, useresizehints, animate, hasroundcorners,
+	    animateresize;
 	pid_t pid;
 	Client *next;
 	Client *snext;
@@ -175,6 +177,8 @@ typedef struct {
 	const Layout *lt;
 	int overrideresizehints;
 	int roundcorners;
+	int animatemove;
+	int animateresize;
 } Rule;
 
 struct Clientlist {
@@ -365,16 +369,21 @@ struct NumTags { char limitexceeded[LENGTH(tags) > 31 ? -1 : 1]; };
 void
 animateclient(Client *c, int x, int y, int w, int h)
 {
+	Client * ct;
 	int oldx = c->x;
 	int oldy = c->y;
 	int oldw = c->w;
 	int oldh = c->h;
-	int frame;
+	int frame, maxframes, n;
 
-	for (frame = 0; frame < animationframes; frame++) {
-		double ratio = (double) frame / animationframes;
+	for (n = 0, ct = nexttiled(c->mon->cl->clients, c->mon); ct; ct = nexttiled(ct->next, ct->mon), n++);
+	maxframes = animationframes - framereduction * n;
+
+	for (frame = 0; frame < maxframes; frame++) {
+		double ratio = (double) frame / maxframes;
 		resizeclient(c, oldx + ratio * (x - oldx), oldy + ratio * (y - oldy),
-				oldw + ratio * (w - oldw), oldh + ratio * (h - oldh) );
+				c->animateresize ? oldw + ratio * (w - oldw) : w,
+				c->animateresize ? oldh + ratio * (h - oldh) : h );
 		usleep(framedur);
 	}
 
@@ -396,9 +405,12 @@ applyrules(Client *c)
 	/* rule matching */
 	c->noswallow = -1;
 	c->isfloating = 0;
-	c->hasroundcorners = 1;
 	c->tags = 0;
+
+	c->hasroundcorners = 1;
 	c->animate = 1;
+	c->animateresize = 1;
+
 	XGetClassHint(dpy, c->win, &ch);
 	class    = ch.res_class ? ch.res_class : broken;
 	instance = ch.res_name  ? ch.res_name  : broken;
@@ -409,10 +421,16 @@ applyrules(Client *c)
 		&& (!r->class || strstr(class, r->class))
 		&& (!r->instance || strstr(instance, r->instance)))
 		{
+			// TODO: Optimize
 			c->isterminal = r->isterminal;
 			c->noswallow  = r->noswallow;
 			c->isfloating = r->isfloating;
-			c->hasroundcorners = r->roundcorners <= -1 ? 0 : 1;
+			if (r->roundcorners <= -1)
+				c->hasroundcorners = 0;
+			if (r->animatemove <= -1)
+				c->animate = 0;
+			if (r->animateresize <= -1)
+				c->animateresize = 0;
 			c->tags |= r->tags;
 			for (m = mons; m && (m->tagset[m->seltags] & c->tags) == 0; m = m->next) ;
 			if (m)

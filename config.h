@@ -8,7 +8,8 @@ static const unsigned int gappxdf   = 4;        /* default gaps between windows 
 static const unsigned int snap      = 16;       /* snap pixel */
 static const int swallowfloating    = 0;        /* 1 means swallow floating windows by default */
 static const int useanimation       = 1;        /* 1 means animate window movements */
-static const int animationframes    = 5;        /* Amount of frames the animations should take per window. */
+static const int animationframes    = 5;       /* Amount of frames the animations should take per window. */
+static const int framereduction     = 0;        /* Amount of frames, the animation should be reduced by, per new Client. */
 static const int framedur           = 15000;    /* Duration of a single animation frame in microseconds */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
@@ -72,12 +73,12 @@ static const Rule rules[] = {
 	 *	WM_CLASS(STRING) = instance, class
 	 *	WM_NAME(STRING) = title
 	 */
-	/* class      instance    title       tags mask     isfloating  isterminal  noswallow   monitor  layout       resizehints  roundcorners*/
-	{ "zoom",     NULL,       NULL,       1 << 8,       0,          0,          0,          -1,      &layouts[2], 0,           0  },
-	{ "Foxit Reader",NULL,    NULL,       0,            0,          0,          1,          -1,      &layouts[2], 0,           -1 },
-	{ "st",       NULL,       NULL,       0,            0,          1,          0,          -1,      NULL,        0,           0  },
-	{ NULL,       NULL,       "Event Tester",0,         1,          0,          1,          -1,      NULL,        0,           0  }, /* xev */
-	{ "MPlayer",  NULL,       NULL,       0,            0,          0,          0,          -1,      NULL,        1,           0  }, /* for webcam */
+	/* class      instance    title       tags mask     isfloating  isterminal  noswallow   monitor  layout       resizehints  roundcorners  animatemove  animateresize */
+	{ "zoom",     NULL,       NULL,       1 << 8,       0,          0,          0,          -1,      &layouts[2], 0,           0,            0,           0  },
+	{ "Foxit Reader",NULL,    NULL,       0,            0,          0,          1,          -1,      &layouts[2], 0,           -1,           0,           0  },
+	{ "st",       NULL,       NULL,       0,            0,          1,          0,          -1,      NULL,        0,           0,            0,           -1 },
+	{ NULL,       NULL,       "Event Tester",0,         1,          0,          1,          -1,      NULL,        0,           0,            0,           0  }, /* xev */
+	{ "MPlayer",  NULL,       NULL,       0,            0,          0,          0,          -1,      NULL,        1,           0,            0,           0  }, /* for webcam */
 };
 
 /* Command to be executed, when swapping the tag.
