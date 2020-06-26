@@ -68,6 +68,8 @@ static const Layout layouts[] = {
 	{ "|||",      tcl },
 };
 
+static const Layout * overviewlayout = &layouts[3]; /* The layout used for the overviewmode. Set to null, to not change layout. */
+
 static const Rule rules[] = {
 	/* xprop(1):
 	 *	WM_CLASS(STRING) = instance, class
@@ -152,6 +154,8 @@ static Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
+
+	{ MODKEY,                       XK_o,      overview,        {0} },
 
 	// Stop DWM
 	// { MODKEY,                       XK_r,      quit,           {0} },

@@ -233,6 +233,7 @@ static void monocle(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static Client *nexttiled(Client *c, Monitor *m);
+static void overview(const Arg *arg);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
@@ -283,6 +284,7 @@ static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
+static void viewselected(const Arg *arg);
 static void warp(const Client *c);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
@@ -349,6 +351,8 @@ static Pertag *pertagglist;
 
 static unsigned int gappx;
 static xcb_connection_t *xcon;
+
+static int overviewmode;
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -1586,6 +1590,21 @@ nexttiled(Client *c, Monitor *m)
 }
 
 void
+overview(const Arg * arg)
+{
+	if (overviewmode == 0 && selmon->tagset[selmon->seltags] != TAGMASK) {
+		if (overviewlayout)
+			pertagglist->ltidxs[0][pertagglist->sellts[0]] = overviewlayout;
+		const Arg viewarg = {.ui = ~0};
+		view(&viewarg);
+		overviewmode = 1;
+	} else {
+		viewselected(NULL);
+		overviewmode = 0;
+	}
+}
+
+void
 pop(Client *c)
 {
 	detach(c);
@@ -2416,6 +2435,8 @@ toggleview(const Arg *arg)
 	unsigned int newtagset = selmon->tagset[selmon->seltags] ^ (arg->ui & TAGMASK);
 	int i;
 
+	overviewmode = 0;
+
 	if (newtagset) {
 		/* prevent displaying the same tags on multiple monitors */
 		for(m = mons; m; m = m->next)
@@ -2445,9 +2466,9 @@ toggleview(const Arg *arg)
 		if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
 			togglebar(NULL);
 
+		attachclients(selmon);
 		focus(NULL);
 		arrange(selmon);
-		attachclients(selmon);
 	}
 	updatecurrentdesktop();
 }
@@ -2779,6 +2800,9 @@ view(const Arg *arg)
 	int i, n, tagcount;
 	unsigned int tmptag;
 
+	/* Reset Overviewmode */
+	overviewmode = 0;
+
 	/* Get Lowest Selected Tag */
 	int ltag;
 	for (ltag = 0; !(arg->ui & (1<<ltag)) && ltag < TAGSLENGTH; ltag++);
@@ -2883,6 +2907,13 @@ view(const Arg *arg)
 	focus(NULL); /* Focus first client */
 	arrange(selmon);
 	updatecurrentdesktop();
+}
+
+void
+viewselected(const Arg * a)
+{
+	const Arg viewarg = {.ui = selmon->sel->tags};
+	view(&viewarg);
 }
 
 void
