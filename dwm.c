@@ -293,7 +293,6 @@ static void bstackhoriz(Monitor *m);
 static void roundcornersclient(Client *c);
 static void roundcornersbar(Monitor *mon);
 static int createroundcornermask(Pixmap * maskP, GC * shapegcP, Window win, int w, int h, int radius);
-static void unroundcorners(Client *c);
 
 static pid_t getparentprocess(pid_t p);
 static int isdescprocess(pid_t p, pid_t c);
@@ -1803,21 +1802,18 @@ roundcornersclient(Client *c)
 	GC shapegc;
 
 	// if (!c || c->isfullscreen)
-	if (!c || !(c->win))
-		return;
-
-	if (c->hasroundcorners == 0)
+	if (!c || !(c->win) || c->hasroundcorners == 0)
 		return;
 
 	/* Create Border Mask */
-	if (createroundcornermask(&mask, &shapegc, c->win, c->w + 2*c->bw, c->h + 2*c->bw, cornerradius + c->bw) == 0) {
+	if (createroundcornermask(&mask, &shapegc, c->win, c->w + 2*c->bw, c->h + 2*c->bw, c->isfullscreen ? 0 : cornerradius + c->bw) == 0) {
 		XShapeCombineMask(dpy, c->win, ShapeBounding, -c->bw, -c->bw, mask, ShapeSet);
 		XFreePixmap(dpy, mask);
 		XFreeGC(dpy, shapegc);
 	}
 
 	/* Create Clip Mask */
-	if (createroundcornermask(&mask, &shapegc, c->win, c->w, c->h, cornerradius) == 0) {
+	if (createroundcornermask(&mask, &shapegc, c->win, c->w, c->h, c->isfullscreen ? 0 : cornerradius) == 0) {
 		XShapeCombineMask(dpy, c->win, ShapeClip, 0, 0, mask, ShapeSet);
 		XFreePixmap(dpy, mask);
 		XFreeGC(dpy, shapegc);
@@ -1841,14 +1837,10 @@ createroundcornermask(Pixmap * maskP, GC * shapegcP, Window win, int w, int h, i
 {
 	Pixmap mask;
 	GC shapegc;
-	int diam;
 	XWindowAttributes xwa;
+	int diam = 2 * radius;
 
-	if (radius <= 0)
-		return 1;
-
-	diam = 2 * radius;
-	if (w < diam || h < diam)
+	if (radius < 0)
 		return 1;
 
 	/* Test and return immediatly, if the window does not exist anymore.
@@ -1872,6 +1864,10 @@ createroundcornermask(Pixmap * maskP, GC * shapegcP, Window win, int w, int h, i
 	XFillRectangle(dpy, mask, shapegc, 0, 0, w, h);
 	XSetForeground(dpy, shapegc, 1);
 
+	if (radius == 0 || w < diam || h < diam) {
+		XFillRectangle(dpy, mask, shapegc, 0, 0, w, h);
+		return 0;
+	}
 	/* topleft, topright, bottomleft, bottomright
 	 * man XArc - positive is counterclockwise
 	 */
@@ -1884,33 +1880,6 @@ createroundcornermask(Pixmap * maskP, GC * shapegcP, Window win, int w, int h, i
 	XFillRectangle(dpy, mask, shapegc, 0, radius, w, h - diam);
 
 	return 0;
-}
-
-void
-unroundcorners(Client *c)
-{
-	/* TODO: Rework to fit counterpart.
-	 * Or even better: implement in counterpart, if radius == 0. */
-	Pixmap mask;
-	GC shapegc;
-
-	if (!c)
-		return;
-
-	if (!(mask = XCreatePixmap(dpy, c->win, c->w, c->h, 1)))
-		return;
-	
-	if (!(shapegc = XCreateGC(dpy, mask, 0, NULL))){
-	    XFreePixmap(dpy, mask);
-	    free(shapegc);
-	    return;
-	}
-
-	XSetForeground(dpy, shapegc, 1);
-	XFillRectangle(dpy, mask, shapegc, 0, 0, c->w, c->h);
-	XShapeCombineMask(dpy, c->win, ShapeBounding, 0, 0, mask, ShapeSet);
-	XFreePixmap(dpy, mask);
-	XFreeGC(dpy, shapegc);
 }
 
 void
