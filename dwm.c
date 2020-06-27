@@ -378,10 +378,12 @@ animateclient(Client *c, int x, int y, int w, int h)
 	int oldy = c->y;
 	int oldw = c->w;
 	int oldh = c->h;
-	int frame, maxframes, n;
+	int frame, n;
+	int maxframes = animationframes;
 
 	for (n = 0, ct = nexttiled(c->mon->cl->clients, c->mon); ct; ct = nexttiled(ct->next, ct->mon), n++);
-	maxframes = animationframes - framereduction * n;
+	if (n >= frreducstart)
+		maxframes = animationframes - framereduction * (n - frreducstart + 1);
 
 	for (frame = 0; frame < maxframes; frame++) {
 		double ratio = (double) frame / maxframes;
