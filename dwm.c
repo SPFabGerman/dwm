@@ -639,9 +639,7 @@ swallow(Client *p, Client *c)
 
 	updatetitle(p);
 	s = scanner ? c : p;
-	XMoveResizeWindow(dpy, p->win, s->x, s->y, s->w, s->h);
-	arrange(p->mon);
-	configure(p);
+	resizeclient(p, s->x, s->y, s->w, s->h);
 	updateclientlist();
 }
 
@@ -658,12 +656,12 @@ unswallow(Client *c)
 	/* unfullscreen the client */
 	setfullscreen(c, 0);
 	updatetitle(c);
-	arrange(c->mon);
+	// arrange(c->mon); # Why is this needed?
 	XMapWindow(dpy, c->win);
-	XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
+	resizeclient(c, c->x, c->y, c->w, c->h);
 	setclientstate(c, NormalState);
 	focus(NULL);
-	arrange(c->mon);
+	arrange(c->mon); /* Update for sizehints etc. */
 }
 
 void
@@ -1456,15 +1454,18 @@ manage(Window w, XWindowAttributes *wa)
 	if (c->mon == selmon)
 		unfocus(selmon->sel, 0);
 	c->mon->sel = c;
-	arrange(c->mon);
 
-	/* TODO: Maybe not needed here, since it is already done in arrange?
-	 * (Unless it is floating.) */
-	roundcornersclient(c);
-
-	XMapWindow(dpy, c->win);
+	/* Save window, to keep it save from changes made in swallow. */
+	Window tw = c->win;
 	if (term)
 		swallow(term, c);
+
+	arrange(c->mon);
+
+	/* Needed here, when the window is floating etc. */
+	roundcornersclient(c);
+
+	XMapWindow(dpy, tw); /* Make the window visible */
 	focus(NULL);
 }
 
@@ -2599,6 +2600,7 @@ updateclientlist()
 				XA_WINDOW, 32, PropModeAppend,
 				(unsigned char *) &(c->win), 1);
 }
+
 void updatecurrentdesktop(void){
 	long rawdata[] = { selmon->tagset[selmon->seltags] };
 	int i=0;
