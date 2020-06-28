@@ -176,9 +176,9 @@ typedef struct {
 	int monitor;
 	const Layout *lt;
 	int overrideresizehints;
-	int roundcorners;
-	int animatemove;
-	int animateresize;
+	int noroundcorners;
+	int noanimatemove;
+	int noanimateresize;
 } Rule;
 
 struct Clientlist {
@@ -406,13 +406,13 @@ applyrules(Client *c)
 	Monitor *m;
 	XClassHint ch = { NULL, NULL };
 	const Layout *newLayout = NULL;
-	int overrideresizehints = 0;
 
-	/* rule matching */
-	c->noswallow = -1;
-	c->isfloating = 0;
+	/* setting defaults */
 	c->tags = 0;
-
+	c->isfloating = 0;
+	c->noswallow = -1;
+	c->isterminal = 0;
+	c->useresizehints = resizehints;
 	c->hasroundcorners = 1;
 	c->animate = 1;
 	c->animateresize = 1;
@@ -427,30 +427,34 @@ applyrules(Client *c)
 		&& (!r->class || strstr(class, r->class))
 		&& (!r->instance || strstr(instance, r->instance)))
 		{
-			// TODO: Optimize
-			c->isterminal = r->isterminal;
-			c->noswallow  = r->noswallow;
-			c->isfloating = r->isfloating;
-			if (r->roundcorners <= -1)
+			if (r->isterminal)
+				c->isterminal = 1;
+			if (r->noswallow)
+				c->noswallow  = 1;
+			if (r->isfloating)
+				c->isfloating = 1;
+			if (r->noroundcorners)
 				c->hasroundcorners = 0;
-			if (r->animatemove <= -1)
+			if (r->noanimatemove)
 				c->animate = 0;
-			if (r->animateresize <= -1)
+			if (r->noanimateresize)
 				c->animateresize = 0;
+			if (r->overrideresizehints != 0)
+				c->useresizehints = r->overrideresizehints == -1 ? 0 : 1;
+
 			c->tags |= r->tags;
 			for (m = mons; m && (m->tagset[m->seltags] & c->tags) == 0; m = m->next) ;
 			if (m)
 				c->mon = m;
 			if (r->lt)
 				newLayout = r->lt;
-			if (r->overrideresizehints)
-				overrideresizehints = r->overrideresizehints;
 		}
 	}
 	if (ch.res_class)
 		XFree(ch.res_class);
 	if (ch.res_name)
 		XFree(ch.res_name);
+
 	c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : c->mon->tagset[c->mon->seltags];
 
 	/* Change Layout on all tags and update the Monitor. */
@@ -469,11 +473,6 @@ applyrules(Client *c)
 		}
 	}
 
-	if (overrideresizehints) {
-		c->useresizehints = overrideresizehints == -1 ? 0 : 1;
-	} else {
-		c->useresizehints = resizehints;
-	}
 }
 
 int
