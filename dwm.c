@@ -61,6 +61,7 @@
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TAGSLENGTH              (LENGTH(tags))
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
+#define TEXTW_TAGAREA(X)        (TEXTW(X) - lrpad + tagpadding)
 #define XRDB_LOAD_COLOR(R,V)    if (XrmGetResource(xrdb, R, NULL, &type, &value) == True) { \
                                   if (value.addr != NULL && strnlen(value.addr, 8) == 7 && value.addr[0] == '#') { \
                                     int i = 1; \
@@ -682,7 +683,7 @@ buttonpress(XEvent *e)
 	if (ev->window == selmon->barwin) {
 		i = x = 0;
 		do
-			x += TEXTW(tags[i]);
+			x += TEXTW_TAGAREA(tags[i]);
 		while (ev->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags)) {
 			click = ClkTagBar;
@@ -711,7 +712,7 @@ calcbarwidth(Monitor * m) {
 		return m->ww;
 	int w = 0;
 	for (int i = 0; i < LENGTH(tags); i++) {
-		w += TEXTW(tags[i]);
+		w += TEXTW_TAGAREA(tags[i]);
 	}
 	w += TEXTW(m->ltsymbol);
 	return w;
@@ -1015,14 +1016,13 @@ drawbar(Monitor *m)
 	}
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
-		w = TEXTW(tags[i]);
+		w = TEXTW_TAGAREA(tags[i]);
 		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
-		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
-		if (occ & 1 << i)
-			drw_rect(drw, x + boxw, 0, w - ( 2 * boxw + 1), boxw,
-			    m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
-			    urg & 1 << i);
-
+		const char * tagstr = (occ & 1 << i) ? tags_occupied[i] : tags[i];
+		if (m == selmon && selmon->sel && selmon->sel->tags & 1 <<
+i)
+			tagstr = tags_inuse[i];
+		drw_text(drw, x, 0, w, bh, tagpadding / 2, tagstr, urg & 1 << i);
 		x += w;
 	}
 	w = blw = TEXTW(m->ltsymbol);

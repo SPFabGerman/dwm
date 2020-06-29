@@ -19,8 +19,8 @@ static const int barheight	    = 22;	/* Height of the bar. Set to 0 to use defau
 static const int barxoffset	    = 4;	/* X and Y Offset of the bar. Works only if simplebar is on. */
 static const int baryoffset	    = 4;
 static const int extrareservedspace = 0;        /* Space at barpos, where no window can be drawn */
-#define MAINFONT "MesloLGS NF:size=10"
-static const char *fonts[]          = { MAINFONT };
+#define MAINFONT "MesloLGS NF:size=16"
+static const char *fonts[]          = { "MesloLGS:size=10", MAINFONT };
 /* TODO: Delete DMENU Stuff */
 static const char dmenufont[]       = MAINFONT;
 #define BLACK "#282c34"
@@ -47,7 +47,11 @@ static const unsigned int alphas[][3]      = {
 };
 
 /* tagging */
-static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
+/* static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" }; */
+static const char *tags[] = { "", "", "", "", "", "", "", "", "" };
+static const char *tags_inuse[] = { "", "", "", "", "", "", "", "", "" };
+static const char *tags_occupied[] = { "", "", "", "", "", "", "", "", "" };
+static const int tagpadding = 14; /* Padding only for the tag area of the bar. */
 
 /* layout(s) */
 static const float mfact     = 0.5; /* factor of master area size [0.05..0.95] */
