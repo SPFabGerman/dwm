@@ -22,6 +22,7 @@
  */
 #include <errno.h>
 #include <locale.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -57,7 +58,9 @@
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw + 2*gappx)
+#define WIDTH_G(X)              ((X)->goalw + 2 * (X)->bw + 2*gappx)
 #define HEIGHT(X)               ((X)->h + 2 * (X)->bw + 2*gappx)
+#define HEIGHT_G(X)             ((X)->goalh + 2 * (X)->bw + 2*gappx)
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TAGSLENGTH              (LENGTH(tags))
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
@@ -112,6 +115,7 @@ struct Client {
 	float mina, maxa;
 	int x, y, w, h;
 	int oldx, oldy, oldw, oldh;
+	int goalx, goaly, goalw, goalh;
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh;
 	int bw, oldbw;
 	unsigned int tags;
@@ -187,8 +191,18 @@ struct Clientlist {
 	Client *stack;
 };
 
+typedef struct AnimateThreadArg {
+	int x, y, w, h;
+	Client * c;
+	pthread_t thread;
+	struct AnimateThreadArg * next;
+} AnimateThreadArg;
+
 /* function declarations */
 static void animateclient(Client *c, int x, int y, int w, int h);
+static void * animateclient_thread(void * arg);
+static void animateclient_start(Client * c, int x, int y, int w, int h);
+static void animateclient_endall();
 static void applyrules(Client *c);
 static int applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact);
 static void arrange(Monitor *m);
@@ -350,6 +364,9 @@ static Colormap cmap;
 static Clientlist *cl;
 static Pertag *pertagglist;
 
+static AnimateThreadArg * animatequeue;
+static pthread_mutex_t animatemutex;
+
 static unsigned int gappx;
 static xcb_connection_t *xcon;
 
@@ -383,18 +400,59 @@ animateclient(Client *c, int x, int y, int w, int h)
 	int maxframes = animationframes;
 
 	for (n = 0, ct = nexttiled(c->mon->cl->clients, c->mon); ct; ct = nexttiled(ct->next, ct->mon), n++);
-	if (n >= frreducstart)
+	if (frreducstart >= 0 && n >= frreducstart)
 		maxframes = animationframes - framereduction * (n - frreducstart + 1);
 
 	for (frame = 0; frame < maxframes; frame++) {
 		double ratio = (double) frame / maxframes;
+		pthread_mutex_lock(&animatemutex);
 		resizeclient(c, oldx + ratio * (x - oldx), oldy + ratio * (y - oldy),
 				c->animateresize ? oldw + ratio * (w - oldw) : w,
 				c->animateresize ? oldh + ratio * (h - oldh) : h );
+		pthread_mutex_unlock(&animatemutex);
 		usleep(framedur);
 	}
 
+	pthread_mutex_lock(&animatemutex);
 	resizeclient(c, x, y, w, h);
+	pthread_mutex_unlock(&animatemutex);
+}
+
+void *
+animateclient_thread(void * arg1)
+{
+	AnimateThreadArg * arg2 = (AnimateThreadArg *) arg1;
+	animateclient(arg2->c, arg2->x, arg2->y, arg2->w, arg2->h);
+	return NULL;
+}
+
+void
+animateclient_start(Client * c, int x, int y, int w, int h)
+{
+	AnimateThreadArg * new = malloc(sizeof(AnimateThreadArg));
+	new->c = c;
+	new->x = x;
+	new->y = y;
+	new->h = h;
+	new->w = w;
+	if (pthread_create(&(new->thread), NULL, animateclient_thread, new) != 0) {
+		fprintf(stderr, "animateclient: could not create new thread!\n");
+	}
+	new->next = animatequeue;
+	animatequeue = new;
+}
+
+void
+animateclient_endall()
+{
+	while (animatequeue != NULL) {
+		if (pthread_join(animatequeue->thread, NULL) != 0) {
+			fprintf(stderr, "Could not join Animation Thread.\n");
+		}
+		AnimateThreadArg * next = animatequeue->next;
+		free(animatequeue);
+		animatequeue = next;
+	}
 }
 
 /* function implementations */
@@ -560,8 +618,10 @@ void
 arrangemon(Monitor *m)
 {
 	strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
-	if (m->lt[m->sellt]->arrange)
+	if (m->lt[m->sellt]->arrange) {
 		m->lt[m->sellt]->arrange(m);
+		animateclient_endall();
+	}
 }
 
 void
@@ -1704,11 +1764,16 @@ resize(Client *c, int x, int y, int w, int h, int interact, int animate)
 
 	if (applysizehints(c, &x, &y, &w, &h, interact)){
 		if (animate && c->animate && useanimation && !interact) {
-			animateclient(c, x, y, w, h);
+			animateclient_start(c, x, y, w, h);
 		} else {
 			resizeclient(c, x, y, w, h);
 		}
 	}
+
+	c->goalx = x;
+	c->goaly = y;
+	c->goalh = h;
+	c->goalw = w;
 }
 
 void
@@ -2194,6 +2259,11 @@ setup(void)
 		pertagglist->showbars[i] = showbar;
 	}
 
+	animatequeue = NULL;
+	if (pthread_mutex_init(&animatemutex, NULL) != 0) {
+		die("Could not create animation mutex.\n");
+	}
+
 	gappx = gappxdf;
 
 	root = RootWindow(dpy, screen);
@@ -2373,11 +2443,11 @@ tile(Monitor *m)
 		if (i < m->nmaster) {
 			h = (m->wh - my) / (MIN(n, m->nmaster) - i);
 			resize(c, m->wx, m->wy + my, mw - (2*c->bw), h - (2*c->bw), 0, 1);
-			my += HEIGHT(c);
+			my += HEIGHT_G(c);
 		} else {
 			h = (m->wh - ty) / (n - i);
 			resize(c, m->wx + mw, m->wy + ty, m->ww - mw - (2*c->bw), h - (2*c->bw), 0, 1);
-			ty += HEIGHT(c);
+			ty += HEIGHT_G(c);
 		}
 }
 
@@ -3231,12 +3301,12 @@ bstack(Monitor *m) {
 		if (i < m->nmaster) {
 			w = (m->ww - mx) / (MIN(n, m->nmaster) - i);
 			resize(c, m->wx + mx, m->wy, w - (2 * c->bw), mh - (2 * c->bw), 0, 1);
-			mx += WIDTH(c);
+			mx += WIDTH_G(c);
 		} else {
 			h = m->wh - mh;
 			resize(c, tx, ty, tw - (2 * c->bw), h - (2 * c->bw), 0, 1);
 			if (tw != m->ww)
-				tx += WIDTH(c);
+				tx += WIDTH_G(c);
 		}
 	}
 }
@@ -3262,11 +3332,11 @@ bstackhoriz(Monitor *m) {
 		if (i < m->nmaster) {
 			w = (m->ww - mx) / (MIN(n, m->nmaster) - i);
 			resize(c, m->wx + mx, m->wy, w - (2 * c->bw), mh - (2 * c->bw), 0, 1);
-			mx += WIDTH(c);
+			mx += WIDTH_G(c);
 		} else {
 			resize(c, tx, ty, m->ww - (2 * c->bw), th - (2 * c->bw), 0, 1);
 			if (th != m->wh)
-				ty += HEIGHT(c);
+				ty += HEIGHT_G(c);
 		}
 	}
 }

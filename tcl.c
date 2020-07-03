@@ -48,7 +48,7 @@ tcl(Monitor * m)
 			       False, 1);
 
 			if (h != m->wh)
-				y = c->y + HEIGHT(c);
+				y = c->goaly + HEIGHT_G(c);
 		}
 	}
 
@@ -70,6 +70,6 @@ tcl(Monitor * m)
 		       False, 1);
 
 		if (h != m->wh)
-			y = c->y + HEIGHT(c);
+			y = c->goaly + HEIGHT_G(c);
 	}
 }

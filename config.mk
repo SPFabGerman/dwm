@@ -28,8 +28,8 @@ LIBS = -L${X11LIB} -lX11 ${XINERAMALIBS} ${FREETYPELIBS} -lXrender -lX11-xcb -lx
 CPPFLAGS = -D_DEFAULT_SOURCE -D_BSD_SOURCE -D_POSIX_C_SOURCE=200809L -DVERSION=\"${VERSION}\" ${XINERAMAFLAGS}
 # CFLAGS_OPT= -Os
 CFLAGS_OPT= -O0
-CFLAGS   = -g -std=c99 -pedantic -Wall -Wno-deprecated-declarations ${CFLAGS_OPT} ${INCS} ${CPPFLAGS}
-LDFLAGS  = ${LIBS}
+CFLAGS   = -g -std=c99 -pedantic -Wall -Wno-deprecated-declarations -pthread ${CFLAGS_OPT} ${INCS} ${CPPFLAGS}
+LDFLAGS  = ${LIBS} -pthread
 
 # Solaris
 #CFLAGS = -fast ${INCS} -DVERSION=\"${VERSION}\"
