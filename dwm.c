@@ -31,6 +31,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <X11/cursorfont.h>
 #include <X11/keysym.h>
 #include <X11/Xatom.h>
@@ -143,6 +145,11 @@ typedef struct {
 } Signal;
 
 typedef struct {
+	const char * name;
+	int (*func)(char *, char *);
+} QuerySignal;
+
+typedef struct {
 	const char *symbol;
 	void (*arrange)(Monitor *);
 } Layout;
@@ -252,6 +259,8 @@ static void overview(const Arg *arg);
 static void pop(Client *);
 static void propertynotify(XEvent *e);
 static void quit(const Arg *arg);
+static void * querysocket_listen(void * arg);
+static void * querysocket_execute(void * arg);
 static Monitor *recttomon(int x, int y, int w, int h);
 static void resize(Client *c, int x, int y, int w, int h, int interact, int animate);
 static void resizeclient(Client *c, int x, int y, int w, int h);
@@ -367,12 +376,16 @@ static Pertag *pertagglist;
 static AnimateThreadArg * animatequeue;
 static pthread_mutex_t animatemutex;
 
+static int querysocket;
+static pthread_t querysocket_thread;
+
 static unsigned int gappx;
 static xcb_connection_t *xcon;
 
 static int overviewmode;
 
 /* configuration, allows nested code to access above variables */
+#include "sockdef.h"
 #include "config.h"
 
 /* Needs to be here, because tags is only defined in config.h. */
@@ -824,6 +837,19 @@ cleanup(void)
 	XSync(dpy, False);
 	XSetInputFocus(dpy, PointerRoot, RevertToPointerRoot, CurrentTime);
 	XDeleteProperty(dpy, root, netatom[NetActiveWindow]);
+
+	/* Close and remove socket.
+	 * Ignore Errors, since we are quitting dwm soon. */
+	if (pthread_cancel(querysocket_thread) != 0)
+		fprintf(stderr, "Could not Cancel Query Thread.\n");
+	if (pthread_join(querysocket_thread, NULL) != 0)
+		fprintf(stderr, "Could not Cancel Query Thread.\n");
+	if (shutdown(querysocket, SHUT_RDWR) != 0)
+		fprintf(stderr, "Could not shutdown socket.\n");
+	if (close(querysocket) != 0)
+		fprintf(stderr, "Could not close socket.\n");
+	if (unlink(socket_path) != 0)
+		fprintf(stderr, "Could not remove socket.\n");
 }
 
 void
@@ -1720,6 +1746,82 @@ quit(const Arg *arg)
 	running = 0;
 }
 
+void *
+querysocket_listen(void * arg) {
+	pthread_t thread;
+	int socketfd;
+	int * socketfd_arg;
+
+	while (running) { /* Wait for socket connections and handle them. */
+		if ((socketfd = accept(querysocket, NULL, NULL)) == -1) {
+			fprintf(stderr, "Could not connect to new socket. Errno: %d\n", errno);
+			continue;
+		}
+
+		/* Save File Descriptor on Heap, to savely bring it to the new thread. */
+		if ((socketfd_arg = malloc(sizeof(socketfd_arg))) == NULL) {
+			fprintf(stderr, "Could not malloc Query Argument. Errno: %d\n", errno);
+			continue;
+		}
+		*socketfd_arg = socketfd;
+
+		if (pthread_create(&thread, NULL, querysocket_execute, socketfd_arg) != 0) {
+			fprintf(stderr, "Could not create Query Execution Thread. Errno: %d\n", errno);
+			close(socketfd);
+			free(socketfd_arg);
+			continue;
+		}
+		pthread_detach(thread);
+	}
+
+	return NULL;
+}
+
+void *
+querysocket_execute(void * arg) {
+	int fd = *((int *) arg);
+
+	int i, used;
+	int res = 1;
+	int (*qfunc)(char *, char *) = NULL;
+	char inputBuf  [MAXBUFF_SOCKET];
+	char outputBuf [MAXBUFF_SOCKET];
+	char funcname  [MAXBUFF_SOCKET];
+
+	if (recv(fd, inputBuf, MAXBUFF_SOCKET, 0) <= 0) {
+		strncpy(outputBuf, "Did not recieve any bytes.", MAXBUFF_SOCKET);
+		goto QueryEnd;
+	}
+	inputBuf[MAXBUFF_SOCKET - 1] = '\0'; /* Make sure the String ends. */
+
+	if (sscanf(inputBuf, "%s %n", funcname, &used) != 1) {
+		strncpy(outputBuf, "Could not read function name.", MAXBUFF_SOCKET);
+		goto QueryEnd;
+	}
+
+	for (i = 0; i < LENGTH(query_funcs); i++) {
+		if (strncmp(funcname, query_funcs[i].name, MAXBUFF_SOCKET) == 0) {
+			qfunc = query_funcs[i].func;
+			break;
+		}
+	}
+	if (qfunc == NULL) {
+		strncpy(outputBuf, "Could not find function.", MAXBUFF_SOCKET);
+		goto QueryEnd;
+	}
+
+	res = qfunc(&inputBuf[used], outputBuf);
+
+QueryEnd:
+	outputBuf[MAXBUFF_SOCKET - 1] = '\0';
+	send(fd, &res, sizeof(res), 0);
+	send(fd, outputBuf, MAXBUFF_SOCKET, 0);
+
+	close(fd);
+	free(arg);
+	return NULL;
+}
+
 Monitor *
 recttomon(int x, int y, int w, int h)
 {
@@ -2233,6 +2335,7 @@ setup(void)
 	int i;
 	XSetWindowAttributes wa;
 	Atom utf8string;
+	struct sockaddr_un sockaddr;
 
 	/* clean up any zombies immediately */
 	sigchld(0);
@@ -2263,6 +2366,22 @@ setup(void)
 	if (pthread_mutex_init(&animatemutex, NULL) != 0) {
 		die("Could not create animation mutex.\n");
 	}
+
+	/* Setup Socket */
+	if ((querysocket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+		die("Could not create socket.\n");
+	sockaddr.sun_family = AF_UNIX;
+	strncpy(sockaddr.sun_path, socket_path, sizeof(sockaddr.sun_path) - 1);
+	if (unlink(socket_path) != 0 && errno != ENOENT)
+		die("Could not delete old socket.\n");
+	if (bind(querysocket, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) != 0)
+		die("Could not bind socket.\n");
+	if (listen(querysocket, BACKLOG) != 0)
+		die("Unable to listen on socket.\n");
+	/* Create new Thread to listen for incomming requests. */
+	if (pthread_create(&querysocket_thread, NULL, querysocket_listen, NULL) != 0)
+		die("Unable to create listening Thread.\n");
+
 
 	gappx = gappxdf;
 
@@ -2883,7 +3002,8 @@ view(const Arg *arg)
 	tagswap_cmd_number[0] = '1' + ltag;
 	/* Spawn the actual Command */
 	const Arg a = { .v = tagswap_cmd };
-	spawn(&a);
+	if (running)
+		spawn(&a);
 
 	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
 		return;

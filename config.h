@@ -92,7 +92,7 @@ static const Rule rules[] = {
 /* Command to be executed, when swapping the tag.
  * tagswap_cmd_number will be replaced by the number of the selected tag. */
 static char tagswap_cmd_number[2] = "1";
-static const char * tagswap_cmd[] = { "swapbg", tagswap_cmd_number /* Will be later replaced */, NULL };
+static const char * tagswap_cmd[] = { "swapbg", tagswap_cmd_number /* Will be later replaced */, "-q", NULL };
 
 /* key definitions */
 #define MODKEY Mod4Mask
@@ -258,3 +258,20 @@ static Signal signals[] = {
 	{ "setlayoutex",    setlayoutex },
 	{ "xrdb",           xrdb },
 };
+
+int queryTags(char * input, char * output) {
+	int i;
+	for (i = 0; i < TAGSLENGTH; i++) {
+		if (selmon->tagset[selmon->seltags] & (1 << i))
+			output[i] = '1';
+		else
+			output[i] = '0';
+	}
+	output[TAGSLENGTH] = '\0';
+	return 0;
+}
+
+static QuerySignal query_funcs[] = {
+	{ "tags", queryTags }
+};
+
