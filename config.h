@@ -119,10 +119,11 @@ static Key keys[] = {
 	// { MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_Down,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_Up,      focusstack,     {.i = -1 } },
-	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
-	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
+	{ MODKEY,                       XK_plus,      incnmaster,     {.i = +1 } },
+	{ MODKEY,                       XK_minus,      incnmaster,     {.i = -1 } },
 	{ MODKEY,                       XK_Left,      setmfact,       {.f = -0.05} },
 	{ MODKEY,                       XK_Right,      setmfact,       {.f = +0.05} },
+	{ MODKEY|Mod5Mask,                       XK_less,      setmfact,       {.f = 1.5} },
 	{ MODKEY,                       XK_g,          setgap,         {.i = 0 } },
 	{ MODKEY,                       XK_Return, zoom,           {0} }, // Focus Selected
 	{ MODKEY,                       XK_Tab,    view,           {0} }, // Tab betwenn recent Tags
