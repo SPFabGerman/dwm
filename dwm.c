@@ -527,7 +527,7 @@ applyrules(Client *c)
 	if (ch.res_name)
 		XFree(ch.res_name);
 
-	c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : (c->mon->tagset[c->mon->seltags] ? c->mon->tagset[c->mon->seltags] : 1);
+	c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : (c->mon->tagset[c->mon->seltags] ? c->mon->tagset[c->mon->seltags] : (1 << (pertagglist->curtag - 1)));
 
 	/* Change Layout on all tags and update the Monitor. */
 	if (newLayout) {
