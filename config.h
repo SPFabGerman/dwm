@@ -260,19 +260,86 @@ static Signal signals[] = {
 	{ "xrdb",           xrdb },
 };
 
-int queryTags(char * input, char * output) {
+// === DWMQ Extra Functions ===
+
+Monitor * getMonFromIndex(int i) {
+	int j;
+	Monitor * m;
+	for (j = 0, m = mons; m && m->next && j < i; j++);
+	return m;
+}
+
+void cpyTags(Monitor * m, char * output) {
 	int i;
 	for (i = 0; i < TAGSLENGTH; i++) {
-		if (selmon->tagset[selmon->seltags] & (1 << i))
+		if (m->tagset[m->seltags] & (1 << i))
 			output[i] = '1';
 		else
 			output[i] = '0';
 	}
 	output[TAGSLENGTH] = '\0';
+}
+
+int queryTags(char * input, char * output) {
+	cpyTags(selmon, output);
+	return 0;
+}
+
+int queryTagsMon(char * input, char * output) {
+	int i;
+	if (sscanf(input, "%d", &i) < 1) {
+		output[0] = '\0';
+		return 1;
+	}
+	cpyTags(getMonFromIndex(i), output);
+	return 0;
+}
+
+int querySelmon(char * input, char * output) {
+	int i;
+	Monitor * m;
+	for(i = 0, m = mons; m != selmon; m=m->next, i++);
+	output[0] = '0' + i;
+	output[1] = '\0';
+	return 0;
+}
+
+int queryGeomToMon(char * input, char * output) {
+	unsigned int i, x, y, w, h;
+	Monitor * m;
+	Monitor * tm;
+	if (sscanf(input, "%ux%u+%u+%u", &x, &y, &w, &h) < 2) {
+		output[0] = '\0';
+		return 1;
+	}
+	tm = recttomon(x, y, w, h);
+	for(i = 0, m = mons; m != tm; m=m->next, i++);
+	output[0] = '0' + i;
+	output[1] = '\0';
+	return 0;
+}
+
+int queryLayout(char * input, char * output) {
+	strcpy(output, selmon->ltsymbol);
+	return 0;
+}
+
+int queryLayoutMon(char * input, char * output) {
+	int i;
+	if (sscanf(input, "%d", &i) < 1) {
+		output[0] = '\0';
+		return 1;
+	}
+	strcpy(output, getMonFromIndex(i)->ltsymbol);
 	return 0;
 }
 
 static QuerySignal query_funcs[] = {
-	{ "tags", queryTags }
+	{ "tags", queryTags },
+	{ "montags", queryTagsMon },
+	{ "selmon", querySelmon },
+	{ "mon", queryGeomToMon },
+	{ "layout", queryLayout },
+	{ "monlayout", queryLayoutMon }
 };
 
