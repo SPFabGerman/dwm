@@ -527,7 +527,15 @@ applyrules(Client *c)
 	if (ch.res_name)
 		XFree(ch.res_name);
 
-	c->tags = c->tags & TAGMASK ? c->tags & TAGMASK : (c->mon->tagset[c->mon->seltags] ? c->mon->tagset[c->mon->seltags] : (1 << (pertagglist->curtag - 1)));
+	if (c->tags & TAGMASK) {
+		c->tags = c->tags & TAGMASK;
+	} else if (c->mon->tagset[c->mon->seltags]) {
+		c->tags = c->mon->tagset[c->mon->seltags];
+	} else if(pertagglist->curtag > 0) {
+		c->tags = 1 << (pertagglist->curtag - 1);
+	} else {
+		c->tags = TAGMASK;
+	}
 
 	/* Change Layout on all tags and update the Monitor. */
 	if (newLayout) {
