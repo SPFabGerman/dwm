@@ -2134,12 +2134,34 @@ scan(void)
 void
 sendmon(Client *c, Monitor *m)
 {
+	int i;
+	Monitor * tm;
 	if (c->mon == m)
 		return;
 	unfocus(c, 1);
 	detachstack(c);
 	c->mon = m;
+	if (!m->tagset[m->seltags]) { /* If Monitor has no tag, than give it one. */
+		/* find the first tag that isn't in use */
+		for (i=0; i < LENGTH(tags); i++) {
+			for (tm=mons; tm && !(tm->tagset[tm->seltags] & (1<<i)); tm=tm->next);
+			if (!tm)
+				break;
+		}
+		if (i >= LENGTH(tags)) {
+			/* reassign all tags to monitors since there's currently no free tag for the
+			 * new monitor */
+			for (i=0, tm=mons; tm; tm=tm->next, i++) {
+				tm->seltags ^= 1;
+				tm->tagset[tm->seltags] = (1<<i) & TAGMASK;
+			}
+		} else {
+			m->tagset[m->seltags] = (1 << i) & TAGMASK;
+		}
+	}
+
 	c->tags = m->tagset[m->seltags]; /* assign tags of target monitor */
+
 	attachstack(c);
 	focus(NULL);
 	arrange(NULL);
@@ -2631,13 +2653,13 @@ toggleview(const Arg *arg)
 
 	overviewmode = 0;
 
-	if (newtagset) {
-		/* prevent displaying the same tags on multiple monitors */
-		for(m = mons; m; m = m->next)
-			if(m != selmon && newtagset & m->tagset[m->seltags])
-				return;
-		selmon->tagset[selmon->seltags] = newtagset;
+	/* prevent displaying the same tags on multiple monitors */
+	for(m = mons; m; m = m->next)
+		if(m != selmon && newtagset & m->tagset[m->seltags])
+			return;
+	selmon->tagset[selmon->seltags] = newtagset;
 
+	if (newtagset) { /* Update Pertag List, when a tag is visible */
 		if (newtagset == ~0) {
 			selmon->pertag->prevtag = selmon->pertag->curtag;
 			selmon->pertag->curtag = 0;
@@ -2656,14 +2678,14 @@ toggleview(const Arg *arg)
 		selmon->sellt = selmon->pertag->sellts[selmon->pertag->curtag];
 		selmon->lt[selmon->sellt] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt];
 		selmon->lt[selmon->sellt^1] = selmon->pertag->ltidxs[selmon->pertag->curtag][selmon->sellt^1];
-
-		if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
-			togglebar(NULL);
-
-		attachclients(selmon);
-		focus(NULL);
-		arrange(selmon);
 	}
+
+	if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
+		togglebar(NULL);
+
+	attachclients(selmon);
+	focus(NULL);
+	arrange(selmon);
 	updatecurrentdesktop();
 }
 
@@ -2997,6 +3019,12 @@ view(const Arg *arg)
 
 	/* Reset Overviewmode */
 	overviewmode = 0;
+
+	if (selmon->tagset[selmon->seltags] == (arg->ui & TAGMASK)) {
+		/* If the same tags where selected, than toggle all of them off. */
+		toggleview(arg);
+		return;
+	}
 
 	/* Get Lowest Selected Tag */
 	int ltag;
