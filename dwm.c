@@ -1587,8 +1587,8 @@ monocle(Monitor *m)
 	for (c = m->cl->clients; c; c = c->next)
 		if (ISVISIBLE(c, m))
 			n++;
-	if (n > 0) /* override layout symbol */
-		snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
+	/* override layout symbol */
+	snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
 	for (c = nexttiled(m->cl->clients, m); c; c = nexttiled(c->next, m))
 		resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0, 1);
 }
@@ -2244,6 +2244,9 @@ setlayout(const Arg *arg)
 	if (arg && arg->v)
 		selmon->lt[selmon->sellt] = (Layout *)arg->v;
 	strncpy(selmon->ltsymbol, selmon->lt[selmon->sellt]->symbol, sizeof selmon->ltsymbol);
+	if (selmon->lt[selmon->sellt]->arrange == monocle) {
+		strncpy(selmon->ltsymbol, "[0]", sizeof selmon->ltsymbol);
+	}
 
 	for(i=0; i<=LENGTH(tags); ++i)
 		if(selmon->tagset[selmon->seltags] & 1<<i)
