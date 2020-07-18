@@ -265,7 +265,7 @@ static Signal signals[] = {
 Monitor * getMonFromIndex(int i) {
 	int j;
 	Monitor * m;
-	for (j = 0, m = mons; m && m->next && j < i; j++);
+	for (j = 0, m = mons; m && m->next && j < i; m = m->next, j++);
 	return m;
 }
 
