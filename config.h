@@ -295,6 +295,15 @@ int queryTagsMon(char * input, char * output) {
 	return 0;
 }
 
+int queryNumMon(char * input, char * output) {
+	int i;
+	Monitor * m;
+	for (i = 0, m = mons; m; m=m->next, i++);
+	output[0] = '0' + i;
+	output[1] = '\0';
+	return 0;
+}
+
 int querySelmon(char * input, char * output) {
 	int i;
 	Monitor * m;
@@ -305,10 +314,10 @@ int querySelmon(char * input, char * output) {
 }
 
 int queryGeomToMon(char * input, char * output) {
-	unsigned int i, x, y, w, h;
+	unsigned int i, x = 0, y = 0, w = 1, h = 1;
 	Monitor * m;
 	Monitor * tm;
-	if (sscanf(input, "%ux%u+%u+%u", &x, &y, &w, &h) < 2) {
+	if (sscanf(input, "%ux%u+%u+%u", &w, &h, &x, &y) < 4) {
 		output[0] = '\0';
 		return 1;
 	}
@@ -337,6 +346,7 @@ int queryLayoutMon(char * input, char * output) {
 static QuerySignal query_funcs[] = {
 	{ "tags", queryTags },
 	{ "montags", queryTagsMon },
+	{ "nummon", queryNumMon },
 	{ "selmon", querySelmon },
 	{ "mon", queryGeomToMon },
 	{ "layout", queryLayout },
