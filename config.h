@@ -344,11 +344,13 @@ int queryLayoutMon(char * input, char * output) {
 }
 
 static QuerySignal query_funcs[] = {
-	{ "tags", queryTags },
-	{ "montags", queryTagsMon },
-	{ "nummon", queryNumMon },
+	{ "nummons", queryNumMon },
 	{ "selmon", querySelmon },
 	{ "mon", queryGeomToMon },
+
+	{ "tags", queryTags },
+	{ "montags", queryTagsMon },
+
 	{ "layout", queryLayout },
 	{ "monlayout", queryLayoutMon }
 };
