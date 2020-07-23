@@ -2,7 +2,7 @@ void
 tcl(Monitor * m)
 {
 	int x, y, h, w, mw, sw, bdw;
-	unsigned int i, n;
+	unsigned int i, n, nn;
 	Client * c;
 
 	for (n = 0, c = nexttiled(m->cl->clients, m); c;
@@ -11,23 +11,33 @@ tcl(Monitor * m)
 	if (n == 0)
 		return;
 
-	c = nexttiled(m->cl->clients, m);
-
-	mw = m->mfact * m->ww;
+	nn = MIN(m->nmaster, n);
+	if (nn != 0)
+		mw = m->mfact * m->ww;
+	else
+		mw = 0;
 	sw = (m->ww - mw) / 2;
-	bdw = (2 * c->bw);
-	resize(c,
-	       n < 3 ? m->wx : m->wx + sw,
-	       m->wy,
-	       n == 1 ? m->ww - bdw : mw - bdw,
-	       m->wh - bdw,
-	       False, 1);
+	y = 0;
+	h = m->wh;
+	for (i = 0, c = nexttiled(m->cl->clients, m); i < nn; i++, c = nexttiled(c->next, m)) {
+		bdw = (2 * c->bw);
+		resize(c,
+				n <= m->nmaster + 1 ? m->wx : m->wx + sw,
+				m->wy + y,
+				n == m->nmaster ? m->ww - bdw : mw - bdw,
+				(h - y) / (nn - i) - bdw,
+				False, 1);
+		y += HEIGHT_G(c);
+	}
 
-	if (--n == 0)
+	n -= nn;
+	if (n == 0)
 		return;
 
+
+	if (nn == 0)
+		c = nexttiled(m->cl->clients, m);
 	w = (m->ww - mw) / ((n > 1) + 1);
-	c = nexttiled(c->next, m);
 
 	if (n > 1)
 	{
@@ -40,6 +50,7 @@ tcl(Monitor * m)
 
 		for (i = 0; c && i < n / 2; c = nexttiled(c->next, m), i++)
 		{
+			bdw = (2 * c->bw);
 			resize(c,
 			       x,
 			       y,
@@ -48,11 +59,10 @@ tcl(Monitor * m)
 			       False, 1);
 
 			if (h != m->wh)
-				y = c->goaly + HEIGHT_G(c);
+				y += HEIGHT_G(c);
 		}
 	}
 
-	// TODO: The calculation for x looks just wierd? Why the wierd division?
 	x = (n + 1 / 2) == 1 ? mw + m->wx : m->wx;
 	y = m->wy;
 	h = m->wh / ((n + 1) / 2);
@@ -62,6 +72,7 @@ tcl(Monitor * m)
 
 	for (i = 0; c; c = nexttiled(c->next, m), i++)
 	{
+		bdw = (2 * c->bw);
 		resize(c,
 		       x,
 		       y,
@@ -70,6 +81,7 @@ tcl(Monitor * m)
 		       False, 1);
 
 		if (h != m->wh)
-			y = c->goaly + HEIGHT_G(c);
+			y += HEIGHT_G(c);
 	}
 }
+

@@ -1,57 +1,56 @@
 void
 fibonacci(Monitor *mon, int s) {
-	unsigned int i, n, nx, ny, nw, nh;
+	unsigned int i, n, cx, cy, cw, ch, nw, nh;
 	Client *c;
 
 	for(n = 0, c = nexttiled(mon->cl->clients, mon); c; c = nexttiled(c->next, mon), n++);
 	if(n == 0)
 		return;
 	
-	nx = mon->wx;
-	ny = 0;
-	nw = mon->ww;
-	nh = mon->wh;
+	cx = mon->wx;
+	cy = mon->wy;
+	cw = mon->ww;
+	ch = mon->wh;
 	
 	for(i = 0, c = nexttiled(mon->cl->clients, mon); c; c = nexttiled(c->next, mon)) {
-		if((i % 2 && nh / 2 > 2 * c->bw)
-		   || (!(i % 2) && nw / 2 > 2 * c->bw)) {
+		if((i % 2 && ch * mon->mfact > 2 * c->bw)
+		   || (!(i % 2) && cw * mon->mfact > 2 * c->bw)) {
+			nw = cw;
+			nh = ch;
 			if(i < n - 1) {
 				if(i % 2)
-					nh /= 2;
+					nh *= mon->mfact;
 				else
-					nw /= 2;
-				if((i % 4) == 2 && !s)
-					nx += nw;
-				else if((i % 4) == 3 && !s)
-					ny += nh;
+					nw *= mon->mfact;
 			}
-			if((i % 4) == 0) {
-				if(s)
-					ny += nh;
-				else
-					ny -= nh;
-			}
+
+			resize(c, cx, cy, nw - 2 * c->bw, nh - 2 * c->bw, False, 1);
+			if((i % 4) == 0)
+				cx += WIDTH_G(c);
 			else if((i % 4) == 1)
-				nx += nw;
-			else if((i % 4) == 2)
-				ny += nh;
+				cy += HEIGHT_G(c);
+			else if((i % 4) == 2) {
+				if(s)
+					cx += WIDTH_G(c);
+				else
+					cx -= WIDTH_G(c);
+			}
 			else if((i % 4) == 3) {
 				if(s)
-					nx += nw;
+					cy += HEIGHT_G(c);
 				else
-					nx -= nw;
+					cy -= HEIGHT_G(c);
 			}
-			if(i == 0)
-			{
-				if(n != 1)
-					nw = mon->ww * mon->mfact;
-				ny = mon->wy;
-			}
-			else if(i == 1)
-				nw = mon->ww - nw;
+
+			if (i % 2)
+				ch -= HEIGHT_G(c);
+			else
+				cw -= WIDTH_G(c);
+
 			i++;
+		} else {
+			resize(c, cx, cy, cw - 2 * c->bw, ch - 2 * c->bw, False, 1);
 		}
-		resize(c, nx, ny, nw - 2 * c->bw, nh - 2 * c->bw, False, 1);
 	}
 }
 
@@ -64,3 +63,4 @@ void
 spiral(Monitor *mon) {
 	fibonacci(mon, 0);
 }
+
