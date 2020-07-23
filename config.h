@@ -18,7 +18,7 @@ static const int simplebar	    = 1;	/* 1 means only the tags and layout is shown
 static const int barheight	    = 22;	/* Height of the bar. Set to 0 to use default height. */
 static const int barxoffset	    = 4;	/* X and Y Offset of the bar. Works only if simplebar is on. */
 static const int baryoffset	    = 4;
-static const int extrareservedspace = 0;        /* Space at barpos, where no window can be drawn */
+static const int extrareservedspace = 4;        /* Space at barpos, where no window can be drawn */
 #define MAINFONT "MesloLGS NF:size=16"
 static const char *fonts[]          = { "MesloLGS:size=10", MAINFONT };
 /* TODO: Delete DMENU Stuff */
@@ -277,7 +277,6 @@ void cpyTags(Monitor * m, char * output) {
 		else
 			output[i] = '0';
 	}
-	output[TAGSLENGTH] = '\0';
 }
 
 int queryTags(char * input, char * output) {
@@ -288,7 +287,6 @@ int queryTags(char * input, char * output) {
 int queryTagsMon(char * input, char * output) {
 	int i;
 	if (sscanf(input, "%d", &i) < 1) {
-		output[0] = '\0';
 		return 1;
 	}
 	cpyTags(getMonFromIndex(i), output);
@@ -300,7 +298,6 @@ int queryNumMon(char * input, char * output) {
 	Monitor * m;
 	for (i = 0, m = mons; m; m=m->next, i++);
 	output[0] = '0' + i;
-	output[1] = '\0';
 	return 0;
 }
 
@@ -309,7 +306,6 @@ int querySelmon(char * input, char * output) {
 	Monitor * m;
 	for(i = 0, m = mons; m != selmon; m=m->next, i++);
 	output[0] = '0' + i;
-	output[1] = '\0';
 	return 0;
 }
 
@@ -318,13 +314,11 @@ int queryGeomToMon(char * input, char * output) {
 	Monitor * m;
 	Monitor * tm;
 	if (sscanf(input, "%ux%u+%u+%u", &w, &h, &x, &y) < 4) {
-		output[0] = '\0';
 		return 1;
 	}
 	tm = recttomon(x, y, w, h);
 	for(i = 0, m = mons; m != tm; m=m->next, i++);
 	output[0] = '0' + i;
-	output[1] = '\0';
 	return 0;
 }
 
@@ -336,7 +330,6 @@ int queryLayout(char * input, char * output) {
 int queryLayoutMon(char * input, char * output) {
 	int i;
 	if (sscanf(input, "%d", &i) < 1) {
-		output[0] = '\0';
 		return 1;
 	}
 	strcpy(output, getMonFromIndex(i)->ltsymbol);

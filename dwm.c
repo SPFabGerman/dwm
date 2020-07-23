@@ -1788,6 +1788,7 @@ querysocket_listen(void * arg) {
 void *
 querysocket_execute(void * arg) {
 	int fd = *((int *) arg);
+	free(arg);
 
 	int i, used;
 	int res = 1;
@@ -1796,7 +1797,9 @@ querysocket_execute(void * arg) {
 	char outputBuf [MAXBUFF_SOCKET];
 	char funcname  [MAXBUFF_SOCKET];
 
-	if (recv(fd, inputBuf, MAXBUFF_SOCKET, 0) <= 0) {
+	memset(outputBuf, '\0', MAXBUFF_SOCKET);
+
+	if (recv(fd, inputBuf, sizeof(inputBuf), 0) <= 0) {
 		strncpy(outputBuf, "Did not recieve any bytes.", MAXBUFF_SOCKET);
 		goto QueryEnd;
 	}
@@ -1808,7 +1811,7 @@ querysocket_execute(void * arg) {
 	}
 
 	for (i = 0; i < LENGTH(query_funcs); i++) {
-		if (strncmp(funcname, query_funcs[i].name, MAXBUFF_SOCKET) == 0) {
+		if (strncmp(funcname, query_funcs[i].name, used) == 0) {
 			qfunc = query_funcs[i].func;
 			break;
 		}
@@ -1821,12 +1824,10 @@ querysocket_execute(void * arg) {
 	res = qfunc(&inputBuf[used], outputBuf);
 
 QueryEnd:
-	outputBuf[MAXBUFF_SOCKET - 1] = '\0';
 	send(fd, &res, sizeof(res), 0);
-	send(fd, outputBuf, MAXBUFF_SOCKET, 0);
+	send(fd, outputBuf, sizeof(outputBuf), 0);
 
 	close(fd);
-	free(arg);
 	return NULL;
 }
 
@@ -3044,9 +3045,6 @@ view(const Arg *arg)
 	if (running)
 		spawn(&a);
 
-	if ((arg->ui & TAGMASK) == selmon->tagset[selmon->seltags])
-		return;
-	
 	/* swap tags when trying to display a tag from another monitor */
 	if(arg->ui & TAGMASK)
 		newtagset = arg->ui & TAGMASK;
@@ -3054,7 +3052,7 @@ view(const Arg *arg)
 		if(m != selmon && newtagset & m->tagset[m->seltags]) {
 			/* prevent displaying all tags (MODKEY-0) when multiple monitors
 			 * are connected */
-			if(newtagset & selmon->tagset[selmon->seltags]) {
+			if(newtagset & selmon->tagset[selmon->seltags] || selmon->tagset[selmon->seltags] == 0) {
 				/* When the new tagset is currently distributes over each monitor:
 				 * remove the overlapping tags. */
 				// TODO: Optimize the criteria for all of this stuff.
