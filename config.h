@@ -60,6 +60,7 @@ static const int resizehints = 0;    /* 1 means respect size hints in tiled resi
 
 /* === Layouts === */
 #include "gaplessgrid.c"
+#include "horizgrid.c"
 #include "fibonacci.c"
 #include "tcl.c"
 static const Layout layouts[] = {
@@ -67,7 +68,7 @@ static const Layout layouts[] = {
 	{ "[]=",      tile },    /* first entry is default */
 	{ "><>",      NULL },    /* no layout function means floating behavior */
 	{ "[M]",      monocle },
-	{ "###",      gaplessgrid },
+	{ "###",      horizgrid },
 	{ "\\\\\\",   dwindle },
 	{ "TTT",      bstack },
 	{ "|||",      tcl },

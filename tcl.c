@@ -1,7 +1,7 @@
 void
 tcl(Monitor * m)
 {
-	int x, y, h, w, mw, sw, bdw;
+	int x, y, h, w, mw, sw, bdw, yl, yr;
 	unsigned int i, n, nn;
 	Client * c;
 
@@ -34,54 +34,39 @@ tcl(Monitor * m)
 	if (n == 0)
 		return;
 
-
 	if (nn == 0)
 		c = nexttiled(m->cl->clients, m);
-	w = (m->ww - mw) / ((n > 1) + 1);
 
-	if (n > 1)
-	{
-		x = m->wx + ((n > 1) ? mw + sw : mw);
-		y = m->wy;
-		h = m->wh / (n / 2);
-
-		if (h < bh)
-			h = m->wh;
-
-		for (i = 0; c && i < n / 2; c = nexttiled(c->next, m), i++)
-		{
-			bdw = (2 * c->bw);
-			resize(c,
-			       x,
-			       y,
-			       w - bdw,
-			       (i + 1 == n / 2) ? m->wy + m->wh - y - bdw : h - bdw,
-			       False, 1);
-
-			if (h != m->wh)
-				y += HEIGHT_G(c);
-		}
-	}
-
-	x = (n + 1 / 2) == 1 ? mw + m->wx : m->wx;
-	y = m->wy;
-	h = m->wh / ((n + 1) / 2);
-
-	if (h < bh)
-		h = m->wh;
-
-	for (i = 0; c; c = nexttiled(c->next, m), i++)
-	{
+	if (n == 1) {
 		bdw = (2 * c->bw);
 		resize(c,
-		       x,
-		       y,
-		       (i + 1 == (n + 1) / 2) ? w - bdw : w - bdw,
-		       (i + 1 == (n + 1) / 2) ? m->wy + m->wh - y - bdw : h - bdw,
-		       False, 1);
+			m->wx + mw,
+			m->wy,
+			m->ww - mw - bdw,
+			m->wh - bdw,
+			False, 1);
+		return;
+	}
 
-		if (h != m->wh)
-			y += HEIGHT_G(c);
+	w = sw;
+	yl = yr = m->wy;
+	for (i = 0; c && i < n; i++, c = nexttiled(c->next, m)) {
+		if (i % 2 == 0) {
+			x = m->wx;
+			y = yl;
+		} else {
+			x = m->wx + sw + mw;
+			y = yr;
+		}
+		h = (m->wh + m->wy - y) / ((n - i + 1) / 2);
+
+		resize(c, x, y, w-bdw, h-bdw, False, 1);
+
+		if (i % 2 == 0) {
+			yl += HEIGHT_G(c);
+		} else {
+			yr += HEIGHT_G(c);
+		}
 	}
 }
 
