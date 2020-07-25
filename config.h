@@ -294,6 +294,40 @@ int queryTagsMon(char * input, char * output) {
 	return 0;
 }
 
+int queryOccTags(char * input, char * output) {
+	unsigned int occ = 0;
+	int i;
+	Client * c;
+	for (c = cl->clients; c; c = c->next) {
+		occ |= c->tags;
+	}
+	for (i = 0; i < TAGSLENGTH; i++) {
+		if (occ & (1 << i))
+			output[i] = '1';
+		else
+			output[i] = '0';
+	}
+	return 0;
+}
+
+int queryUrgTags(char * input, char * output) {
+	unsigned int urg = 0;
+	int i;
+	Client * c;
+	for (c = cl->clients; c; c = c->next) {
+		if (c->isurgent)
+			urg |= c->tags;
+	}
+	for (i = 0; i < TAGSLENGTH; i++) {
+		if (urg & (1 << i))
+			output[i] = '1';
+		else
+			output[i] = '0';
+	}
+	return 0;
+
+}
+
 int queryNumMon(char * input, char * output) {
 	int i;
 	Monitor * m;
@@ -344,6 +378,9 @@ static QuerySignal query_funcs[] = {
 
 	{ "tags", queryTags },
 	{ "montags", queryTagsMon },
+
+	{ "occ", queryOccTags },
+	{ "urg", queryUrgTags },
 
 	{ "layout", queryLayout },
 	{ "monlayout", queryLayoutMon }
