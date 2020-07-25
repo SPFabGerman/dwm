@@ -806,7 +806,10 @@ calcbarxoffset(Monitor * m) {
 
 int
 calcbaryoffset(Monitor * m) {
-	return simplebar ? baryoffset + m->by : m->by;
+	if (m->showbar)
+		return simplebar ? baryoffset + m->by : m->by;
+	else
+		return m->by;
 }
 
 void

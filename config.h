@@ -12,13 +12,13 @@ static const int animationframes    = 10;       /* Amount of frames the animatio
 static const int framereduction     = 0;        /* Amount of frames, the animation should be reduced by, per new Client. */
 static const int frreducstart       = -1;       /* After how many Clients should the animation time be decreased? */
 static const int framedur           = 15000;    /* Duration of a single animation frame in microseconds */
-static const int showbar            = 1;        /* 0 means no bar */
+static const int showbar            = 0;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
 static const int simplebar	    = 1;	/* 1 means only the tags and layout is shown. */
 static const int barheight	    = 22;	/* Height of the bar. Set to 0 to use default height. */
 static const int barxoffset	    = 4;	/* X and Y Offset of the bar. Works only if simplebar is on. */
 static const int baryoffset	    = 4;
-static const int extrareservedspace = 4;        /* Space at barpos, where no window can be drawn */
+static const int extrareservedspace = 30;        /* Space at barpos, where no window can be drawn */
 #define MAINFONT "MesloLGS NF:size=16"
 static const char *fonts[]          = { "MesloLGS:size=10", MAINFONT };
 /* TODO: Delete DMENU Stuff */
