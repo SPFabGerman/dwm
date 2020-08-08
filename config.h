@@ -377,7 +377,7 @@ int querySelWin(char * input, char * output) {
 	Client * c;
 	
 	r = sscanf(input, "%d", &tag);
-	if (r == 0) {
+	if (r <= 0) {
 		tagmask = selmon->tagset[selmon->seltags];
 	} else {
 		tagmask = 1 << tag;
@@ -400,7 +400,7 @@ int queryMasterWin(char * input, char * output) {
 	Client * c;
 	
 	r = sscanf(input, "%d", &tag);
-	if (r == 0) {
+	if (r <= 0) {
 		tagmask = selmon->tagset[selmon->seltags];
 	} else {
 		tagmask = 1 << tag;
