@@ -1166,6 +1166,7 @@ enternotify(XEvent *e)
 	} else if (!c || c == selmon->sel)
 		return;
 	focus(c);
+	restack(selmon);
 }
 
 void
@@ -1827,6 +1828,7 @@ querysocket_execute(void * arg) {
 	}
 
 	res = qfunc(&inputBuf[used], outputBuf);
+	outputBuf[MAXBUFF_SOCKET - 1] = '\0';
 
 QueryEnd:
 	send(fd, &res, sizeof(res), 0);
@@ -2671,9 +2673,10 @@ toggleview(const Arg *arg)
 	for(m = mons; m; m = m->next)
 		if(m != selmon && newtagset & m->tagset[m->seltags])
 			return;
+
 	selmon->tagset[selmon->seltags] = newtagset;
 
-	if (newtagset) { /* Update Pertag List, when a tag is visible */
+	if (newtagset) { /* Update Pertag List, when at least one tag is visible */
 		if (newtagset == ~0) {
 			selmon->pertag->prevtag = selmon->pertag->curtag;
 			selmon->pertag->curtag = 0;
@@ -3028,7 +3031,7 @@ view(const Arg *arg)
 	Monitor *m;
 	Client *c;
 	unsigned int newtagset = selmon->tagset[selmon->seltags ^ 1];
-	int i, n, tagcount;
+	int i, n, tagcount, ltag;
 	unsigned int tmptag;
 
 	/* Reset Overviewmode */
@@ -3041,10 +3044,13 @@ view(const Arg *arg)
 	}
 
 	/* Get Lowest Selected Tag */
-	int ltag;
-	for (ltag = 0; !(arg->ui & (1<<ltag)) && ltag < TAGSLENGTH; ltag++);
-	/* Change Command Number */
-	tagswap_cmd_number[0] = '1' + ltag;
+	if (arg->ui & TAGMASK) { 
+		for (ltag = 0; !(arg->ui & (1<<ltag)) && ltag < TAGSLENGTH; ltag++);
+		/* Change Command Number */
+		tagswap_cmd_number[0] = '1' + ltag;
+	} else {
+		tagswap_cmd_number[0] = '0';
+	}
 	/* Spawn the actual Command */
 	const Arg a = { .v = tagswap_cmd };
 	if (running)

@@ -371,6 +371,52 @@ int queryLayoutMon(char * input, char * output) {
 	return 0;
 }
 
+int querySelWin(char * input, char * output) {
+	int r,tag;
+	unsigned int tagmask;
+	Client * c;
+	
+	r = sscanf(input, "%d", &tag);
+	if (r == 0) {
+		tagmask = selmon->tagset[selmon->seltags];
+	} else {
+		tagmask = 1 << tag;
+	}
+
+	for (c = selmon->cl->stack; c; c = c->snext) {
+		if (c->tags & tagmask) {
+			/* strncpy(output, c->name, MAXBUFF_SOCKET); */
+			snprintf(output, MAXBUFF_SOCKET, "0x%lx", c->win);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+int queryMasterWin(char * input, char * output) {
+	int r,tag;
+	unsigned int tagmask;
+	Client * c;
+	
+	r = sscanf(input, "%d", &tag);
+	if (r == 0) {
+		tagmask = selmon->tagset[selmon->seltags];
+	} else {
+		tagmask = 1 << tag;
+	}
+
+	for (c = selmon->cl->clients; c; c = c->next) {
+		if (c->tags & tagmask && !c->isfloating) {
+			/* strncpy(output, c->name, MAXBUFF_SOCKET); */
+			snprintf(output, MAXBUFF_SOCKET, "0x%lx", c->win);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 static QuerySignal query_funcs[] = {
 	{ "nummons", queryNumMon },
 	{ "selmon", querySelmon },
@@ -383,6 +429,8 @@ static QuerySignal query_funcs[] = {
 	{ "urg", queryUrgTags },
 
 	{ "layout", queryLayout },
-	{ "monlayout", queryLayoutMon }
+	{ "monlayout", queryLayoutMon },
+	{ "selwin", querySelWin },
+	{ "masterwin", queryMasterWin }
 };
 
