@@ -95,6 +95,9 @@ static const Rule rules[] = {
 static char tagswap_cmd_number[2] = "1";
 static const char * tagswap_cmd[] = { "swapbg", tagswap_cmd_number /* Will be later replaced */, "-q", NULL };
 
+/* Cmd to update the external bar */
+static const char * barupdate_cmd[] = { "polybar-msg", "hook", "dwmtags", "1", NULL };
+
 /* key definitions */
 #define MODKEY Mod4Mask
 #define TAGKEYS(KEY,TAG) \

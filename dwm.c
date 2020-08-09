@@ -286,6 +286,7 @@ static void seturgent(Client *c, int urg);
 static void showhide(Client *c);
 static void sigchld(int unused);
 static void spawn(const Arg *arg);
+static void spawnbarupdate();
 static void tag(const Arg *arg);
 static void tagmon(const Arg *arg);
 static void tile(Monitor *);
@@ -1145,6 +1146,8 @@ drawbars(void)
 {
 	Monitor *m;
 
+	// spawnbarupdate();
+
 	for (m = mons; m; m = m->next)
 		drawbar(m);
 }
@@ -1566,6 +1569,7 @@ manage(Window w, XWindowAttributes *wa)
 
 	XMapWindow(dpy, tw); /* Make the window visible */
 	focus(NULL);
+	spawnbarupdate();
 }
 
 void
@@ -2276,32 +2280,7 @@ setfullscreen(Client *c, int fullscreen)
 void
 setlayout(const Arg *arg)
 {
-	unsigned int i;
-	if (!arg || !arg->v || arg->v != selmon->lt[selmon->sellt])
-		selmon->sellt ^= 1;
-	if (arg && arg->v)
-		selmon->lt[selmon->sellt] = (Layout *)arg->v;
-	strncpy(selmon->ltsymbol, selmon->lt[selmon->sellt]->symbol, sizeof selmon->ltsymbol);
-	if (selmon->lt[selmon->sellt]->arrange == monocle) {
-		strncpy(selmon->ltsymbol, "[0]", sizeof selmon->ltsymbol);
-	}
-
-	for(i=0; i<=LENGTH(tags); ++i)
-		if(selmon->tagset[selmon->seltags] & 1<<i)
-		{
-			selmon->pertag->ltidxs[(i+1)%(LENGTH(tags)+1)][selmon->sellt] = selmon->lt[selmon->sellt]; 
-			selmon->pertag->sellts[(i+1)%(LENGTH(tags)+1)] = selmon->sellt;
-		}
-
-	if (selmon->pertag->curtag == 0) {
-		selmon->pertag->sellts[0] ^= 1;
-		selmon->pertag->ltidxs[0][selmon->pertag->sellts[0]] = selmon->lt[selmon->sellt];
-	}
-
-	if (selmon->sel)
-		arrange(selmon);
-	else
-		drawbar(selmon);
+	setlayoutcustommonitor(arg, selmon);
 }
 
 void
@@ -2309,14 +2288,18 @@ setlayoutcustommonitor(const Arg *arg, Monitor *m)
 {
 	unsigned int i;
 	if (!m) {
-		setlayout(arg);
-		return ;
+		m = selmon;
 	}
+
 	if (!arg || !arg->v || arg->v != m->lt[m->sellt])
 		m->sellt ^= 1;
 	if (arg && arg->v)
 		m->lt[m->sellt] = (Layout *)arg->v;
 	strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
+
+	if (m->lt[m->sellt]->arrange == monocle) {
+		strncpy(selmon->ltsymbol, "[0]", sizeof selmon->ltsymbol);
+	}
 
 	for(i=0; i<=LENGTH(tags); ++i)
 		if(m->tagset[m->seltags] & 1<<i)
@@ -2326,10 +2309,16 @@ setlayoutcustommonitor(const Arg *arg, Monitor *m)
 			m->pertag->sellts[(i+1)%(LENGTH(tags)+1)] = m->sellt;
 		}
 
+	if (m->pertag->curtag == 0) {
+		m->pertag->sellts[0] ^= 1;
+		m->pertag->ltidxs[0][selmon->pertag->sellts[0]] = m->lt[m->sellt];
+	}
+
 	if (m->sel)
 		arrange(m);
 	else
 		drawbar(m);
+	spawnbarupdate();
 }
 
 /* arg > 1.0 will set mfact absolutely */
@@ -2553,6 +2542,13 @@ spawn(const Arg *arg)
 }
 
 void
+spawnbarupdate()
+{
+	const Arg a = { .v = barupdate_cmd };
+	spawn(&a);
+}
+
+void
 tag(const Arg *arg)
 {
 	Monitor *m;
@@ -2574,6 +2570,7 @@ tag(const Arg *arg)
 		selmon->sel->tags = arg->ui & TAGMASK;
 		focus(NULL);
 		arrange(selmon);
+		spawnbarupdate();
 	}
 }
 
@@ -2656,8 +2653,9 @@ toggletag(const Arg *arg)
 		selmon->sel->tags = newtags;
 		focus(NULL);
 		arrange(selmon);
+		updatecurrentdesktop();
+		spawnbarupdate();
 	}
-	updatecurrentdesktop();
 }
 
 void
@@ -2704,6 +2702,7 @@ toggleview(const Arg *arg)
 	focus(NULL);
 	arrange(selmon);
 	updatecurrentdesktop();
+	spawnbarupdate();
 }
 
 void
@@ -2759,6 +2758,8 @@ unmanage(Client *c, int destroyed)
 		focus(NULL);
 		updateclientlist();
 	}
+
+	spawnbarupdate();
 }
 
 void
@@ -3145,9 +3146,10 @@ view(const Arg *arg)
 	if (selmon->showbar != selmon->pertag->showbars[selmon->pertag->curtag])
 		togglebar(NULL);
 
-	focus(NULL); /* Focus first client */
+	focus(NULL); /* Focus last client */
 	arrange(selmon);
 	updatecurrentdesktop();
+	spawnbarupdate();
 }
 
 void
