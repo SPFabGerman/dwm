@@ -3419,6 +3419,7 @@ zoom(const Arg *arg)
 		if (!c || !(c = nexttiled(c->next, selmon)))
 			return;
 	pop(c);
+	spawnbarupdate();
 }
 
 int
