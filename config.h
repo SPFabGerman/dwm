@@ -82,7 +82,7 @@ static const Rule rules[] = {
 	 *	WM_NAME(STRING) = title
 	 */
 	/* class      instance    title       tags mask  isfloating  isterminal  noswallow  monitor  layout       resizehints  noroundcorners  noanimatemove  noanimateresize */
-	{ "zoom",     NULL,       NULL,       1 << 8,    0,          0,          0,         -1,      &layouts[2], 0,           0,              0,             0  },
+	{ "zoom",     NULL,       NULL,       1 << 8,    0,          0,          0,         -1,      &layouts[1], 0,           0,              0,             0  },
 	{ "Foxit Reader", NULL,   NULL,       0,         0,          0,          0,         -1,      &layouts[2], 0,           0,              0,             0  },
 	{ "Foxit Reader", NULL,   "Form",     0,         1,          0,          1,         -1,      NULL,        0,           1,              0,             0  }, /* prevent bug, when applying pixmap */
 	{ "st",       NULL,       NULL,       0,         0,          1,          0,         -1,      NULL,        0,           0,              0,             1  },

@@ -266,6 +266,7 @@ static void resize(Client *c, int x, int y, int w, int h, int interact, int anim
 static void resizeclient(Client *c, int x, int y, int w, int h);
 static void resizemouse(const Arg *arg);
 static void restack(Monitor *m);
+static void restack_nowarp(Monitor *m);
 static void run(void);
 static void scan(void);
 static int sendevent(Client *c, Atom proto);
@@ -1117,8 +1118,7 @@ drawbar(Monitor *m)
 		w = TEXTW_TAGAREA(tags[i]);
 		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
 		const char * tagstr = (occ & 1 << i) ? tags_occupied[i] : tags[i];
-		if (m == selmon && selmon->sel && selmon->sel->tags & 1 <<
-i)
+		if (m == selmon && selmon->sel && selmon->sel->tags & 1 << i)
 			tagstr = tags_inuse[i];
 		drw_text(drw, x, 0, w, bh, tagpadding / 2, tagstr, urg & 1 << i);
 		x += w;
@@ -1169,7 +1169,7 @@ enternotify(XEvent *e)
 	} else if (!c || c == selmon->sel)
 		return;
 	focus(c);
-	restack(selmon);
+	restack_nowarp(selmon);
 }
 
 void
@@ -1997,6 +1997,14 @@ resizemouse(const Arg *arg)
 void
 restack(Monitor *m)
 {
+	restack_nowarp(m);
+	if (m == selmon && (m->tagset[m->seltags] & m->sel->tags) && selmon->lt[selmon->sellt] != &layouts[2] /* Monocle */)
+		warp(m->sel);
+}
+
+void
+restack_nowarp(Monitor *m)
+{
 	Client *c;
 	XEvent ev;
 	XWindowChanges wc;
@@ -2017,8 +2025,6 @@ restack(Monitor *m)
 	}
 	XSync(dpy, False);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
-	if (m == selmon && (m->tagset[m->seltags] & m->sel->tags) && selmon->lt[selmon->sellt] != &layouts[2])
-		warp(m->sel);
 }
 
 void
@@ -3088,7 +3094,7 @@ view(const Arg *arg)
 			m->lt[m->sellt^1] = m->pertag->ltidxs[ltag][m->sellt^1];
 
 			attachclients(m);
-			arrange(m);
+			arrange(m); /* TODO: Do both arrange function calls at the same time */
 
 			/* TODO: Check if this still works for > 2 Monitors. */
 			break;
