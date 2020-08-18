@@ -1998,7 +1998,7 @@ void
 restack(Monitor *m)
 {
 	restack_nowarp(m);
-	if (m == selmon && (m->tagset[m->seltags] & m->sel->tags) && selmon->lt[selmon->sellt] != &layouts[2] /* Monocle */)
+	if (m && m == selmon && m->sel && /* TODO: Optimize the rest of the line */ (m->tagset[m->seltags] & m->sel->tags) && selmon->lt[selmon->sellt] != &layouts[2] /* Monocle */)
 		warp(m->sel);
 }
 
