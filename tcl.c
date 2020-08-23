@@ -24,7 +24,7 @@ tcl(Monitor * m)
 		resize(c,
 				n <= m->nmaster + 1 ? m->wx : m->wx + sw,
 				m->wy + y,
-				n == m->nmaster ? m->ww - bdw : mw - bdw,
+				n <= m->nmaster ? m->ww - bdw : mw - bdw,
 				(h - y) / (nn - i) - bdw,
 				False, 1);
 		y += HEIGHT_G(c);
@@ -51,6 +51,7 @@ tcl(Monitor * m)
 	w = sw;
 	yl = yr = m->wy;
 	for (i = 0; c && i < n; i++, c = nexttiled(c->next, m)) {
+		bdw = (2 * c->bw);
 		if (i % 2 == 0) {
 			x = m->wx;
 			y = yl;
