@@ -360,6 +360,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 };
 static Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
+static int startupdone = 0;
 static Cur *cursor[CurLast];
 static Clr **scheme;
 static Display *dpy;
@@ -452,6 +453,9 @@ animateclient_start(Client * c, int x, int y, int w, int h)
 	new->w = w;
 	if (pthread_create(&(new->thread), NULL, animateclient_thread, new) != 0) {
 		fprintf(stderr, "animateclient: could not create new thread!\n");
+		resizeclient(c, x, y, w, h);
+		free(new);
+		return;
 	}
 	new->next = animatequeue;
 	animatequeue = new;
@@ -551,7 +555,7 @@ applyrules(Client *c)
 		}
 		if (c->mon->tagset[c->mon->seltags] & c->tags) {
 			Arg a = { .v = newLayout };
-			setlayoutcustommonitor(&a, c->mon);
+			setlayoutcustommonitor(&a, c->mon); /* TODO: Rausoptimieren, um Aufruf der Updatebar CMD zu vermeiden */
 		}
 	}
 
@@ -1885,7 +1889,7 @@ resize(Client *c, int x, int y, int w, int h, int interact, int animate)
 	h -= currgap * 2;
 
 	if (applysizehints(c, &x, &y, &w, &h, interact)){
-		if (animate && c->animate && useanimation && !interact) {
+		if (animate && c->animate && useanimation && !interact && startupdone && running) {
 			animateclient_start(c, x, y, w, h);
 		} else {
 			resizeclient(c, x, y, w, h);
@@ -3450,6 +3454,7 @@ main(int argc, char *argv[])
 		die("pledge");
 #endif /* __OpenBSD__ */
 	scan();
+	startupdone = 1;
 	run();
 	cleanup();
 	XCloseDisplay(dpy);
