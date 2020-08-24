@@ -3503,11 +3503,12 @@ bstack(Monitor *m) {
 		if (i < m->nmaster) {
 			w = (m->ww - mx) / (MIN(n, m->nmaster) - i);
 			resize(c, m->wx + mx, m->wy, w - (2 * c->bw), mh - (2 * c->bw), 0, 1);
-			mx += WIDTH_G(c);
+			if (mx + WIDTH_G(c) < m->ww)
+				mx += WIDTH_G(c);
 		} else {
 			h = m->wh - mh;
 			resize(c, tx, ty, tw - (2 * c->bw), h - (2 * c->bw), 0, 1);
-			if (tw != m->ww)
+			if (tx + WIDTH_G(c) < m->ww)
 				tx += WIDTH_G(c);
 		}
 	}

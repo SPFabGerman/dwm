@@ -27,7 +27,8 @@ tcl(Monitor * m)
 				n <= m->nmaster ? m->ww - bdw : mw - bdw,
 				(h - y) / (nn - i) - bdw,
 				False, 1);
-		y += HEIGHT_G(c);
+		if (y + HEIGHT_G(c) < m->wh)
+			y += HEIGHT_G(c);
 	}
 
 	n -= nn;
@@ -49,7 +50,7 @@ tcl(Monitor * m)
 	}
 
 	w = sw;
-	yl = yr = m->wy;
+	yl = yr = 0;
 	for (i = 0; c && i < n; i++, c = nexttiled(c->next, m)) {
 		bdw = (2 * c->bw);
 		if (i % 2 == 0) {
@@ -59,14 +60,16 @@ tcl(Monitor * m)
 			x = m->wx + sw + mw;
 			y = yr;
 		}
-		h = (m->wh + m->wy - y) / ((n - i + 1) / 2);
+		h = (m->wh - y) / ((n - i + 1) / 2);
 
-		resize(c, x, y, w-bdw, h-bdw, False, 1);
+		resize(c, x, m->wy + y, w-bdw, h-bdw, False, 1);
 
 		if (i % 2 == 0) {
-			yl += HEIGHT_G(c);
+			if (yl + HEIGHT_G(c) < m->wh)
+				yl += HEIGHT_G(c);
 		} else {
-			yr += HEIGHT_G(c);
+			if (yr + HEIGHT_G(c) < m->wh)
+				yr += HEIGHT_G(c);
 		}
 	}
 }
