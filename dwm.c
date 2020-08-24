@@ -362,6 +362,7 @@ static void (*handler[LASTEvent]) (XEvent *) = {
 static Atom wmatom[WMLast], netatom[NetLast];
 static int running = 1;
 static int startupdone = 0;
+static int tempdisableanimation = 0;
 static Cur *cursor[CurLast];
 static Clr **scheme;
 static Display *dpy;
@@ -790,8 +791,11 @@ buttonpress(XEvent *e)
 	}
 	for (i = 0; i < LENGTH(buttons); i++)
 		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
-		&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state))
+				&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state)) {
+			tempdisableanimation = 1; /* Disable animations on all button events to make them more responsive */
 			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
+			tempdisableanimation = 0;
+		}
 }
 
 int
@@ -1375,7 +1379,20 @@ void
 incnmaster(const Arg *arg)
 {
 	unsigned int i;
-	selmon->nmaster = MAX(selmon->nmaster + arg->i, 0);
+	int n;
+	Client * c;
+
+	for (n = 0, c = nexttiled(selmon->cl->clients, selmon); c; c = nexttiled(c->next, selmon), n++);
+
+	if (arg->i == 0)
+		selmon->nmaster = nmaster;
+	else if (selmon->nmaster + arg->i > n)
+		selmon->nmaster = n;
+	else if (selmon->nmaster + arg->i < 0)
+		selmon->nmaster = 0;
+	else
+		selmon->nmaster += arg->i;
+
 	for(i=0; i<=LENGTH(tags); ++i)
 		if(selmon->tagset[selmon->seltags] & 1<<i)
 			selmon->pertag->nmasters[(i+1)%(LENGTH(tags)+1)] = selmon->nmaster;
@@ -1890,7 +1907,7 @@ resize(Client *c, int x, int y, int w, int h, int interact, int animate)
 	h -= currgap * 2;
 
 	if (applysizehints(c, &x, &y, &w, &h, interact)){
-		if (animate && c->animate && useanimation && !interact && startupdone && running) {
+		if (animate && c->animate && useanimation && !interact && startupdone && running && !tempdisableanimation) {
 			animateclient_start(c, x, y, w, h);
 		} else {
 			resizeclient(c, x, y, w, h);

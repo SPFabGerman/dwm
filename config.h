@@ -125,6 +125,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_Up,      focusstack,     {.i = -1 } },
 	{ MODKEY,                       XK_plus,      incnmaster,     {.i = +1 } },
 	{ MODKEY,                       XK_minus,      incnmaster,     {.i = -1 } },
+	/* { MODKEY,                       XK_equal,      incnmaster,     {.i = 0 } }, */ // Conflicts with Shift-0 (Tag All)
 	{ MODKEY,                       XK_less,      setmfact,       {.f = -0.05} },
 	{ MODKEY|ShiftMask,                       XK_less,      setmfact,       {.f = +0.05} },
 	{ MODKEY|Mod5Mask,                       XK_less,      setmfact,       {.f = mfact+1.0} },
@@ -176,18 +177,23 @@ static Key keys[] = {
 /* click can be ClkTagBar, ClkLtSymbol, ClkStatusText, ClkWinTitle, ClkClientWin, or ClkRootWin */
 static Button buttons[] = {
 	/* click                event mask      button          function        argument */
-	{ ClkLtSymbol,          0,              Button1,        setlayout,      {0} },
-	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
-	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
-	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },
 	{ ClkClientWin,         MODKEY,         Button1,        movemouse,      {0} },
 	{ ClkClientWin,         MODKEY,         Button2,        togglefloating, {0} },
 	{ ClkClientWin,         MODKEY,         Button3,        resizemouse,    {0} },
 	{ ClkClientWin,         MODKEY|ControlMask,         Button1,        resizemouse,    {0} },
+	{ ClkClientWin,         MODKEY,         Button4,        setmfact,       { .f = +0.025 } },
+	{ ClkClientWin,         MODKEY,         Button5,        setmfact,       { .f = -0.025 } },
+	{ ClkRootWin,           MODKEY,         Button4,        setmfact,       { .f = +0.025 } },
+	{ ClkRootWin,           MODKEY,         Button5,        setmfact,       { .f = -0.025 } },
+
 	{ ClkTagBar,            0,              Button1,        view,           {0} },
 	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
 	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
 	{ ClkTagBar,            MODKEY,         Button3,        toggletag,      {0} },
+	{ ClkLtSymbol,          0,              Button1,        setlayout,      {0} },
+	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
+	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
+	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },
 };
 
 // === DWMC Extra Functions ===
