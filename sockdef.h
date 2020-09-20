@@ -1,4 +1,4 @@
-char * socket_path = "/home/fabian/dwm_socket";
+char * socket_path = "/home/fabian/.cache/dwm_socket";
 
 #define BACKLOG 5
 
