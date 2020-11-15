@@ -1,5 +1,10 @@
 #!/usr/bin/env sh
 
+if ! pidof dwm > /dev/null; then
+	echo "dwm not running" 1>&2
+	exit 1
+fi
+
 signal() {
 	xsetroot -name "fsignal:$*"
 }
@@ -38,3 +43,4 @@ case $# in
 	exit 1
 	;;
 esac
+

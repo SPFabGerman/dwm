@@ -72,6 +72,7 @@ static const Layout layouts[] = {
 	{ "\\\\\\",   dwindle },
 	{ "TTT",      bstack },
 	{ "|||",      tcl },
+	{ "|M|",      fullmonocle },
 };
 
 static const Layout * overviewlayout = &layouts[3]; /* The layout used for the overviewmode. Set to null, to not change layout. */
@@ -85,6 +86,7 @@ static const Rule rules[] = {
 	{ "zoom",     NULL,       NULL,       1 << 8,    0,          0,          0,         -1,      &layouts[1], 0,           0,              0,             0  },
 	{ "Foxit Reader", NULL,   NULL,       0,         0,          0,          0,         -1,      &layouts[2], 0,           0,              0,             0  },
 	{ "Foxit Reader", NULL,   "Form",     0,         1,          0,          1,         -1,      NULL,        0,           1,              0,             0  }, /* prevent bug, when applying pixmap */
+	{ "albert",   NULL,       NULL,       0,         1,          0,          1,         -1,      NULL,        0,           1,              0,             0  }, /* prevent bug, when applying pixmap */
 	{ "st",       NULL,       NULL,       0,         0,          1,          0,         -1,      NULL,        0,           0,              0,             1  },
 	{ NULL,       NULL,       "Event Tester",0,      1,          0,          1,         -1,      NULL,        0,           0,              0,             0  }, /* xev */
 	{ "MPlayer",  NULL,       NULL,       0,         0,          0,          0,         -1,      NULL,        1,           0,              0,             0  }, /* for webcam */
@@ -138,6 +140,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,                       XK_t,      setlayout,      {.v = &layouts[0]} },
 	{ MODKEY|ShiftMask,                       XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY|ShiftMask,                       XK_m,      setlayout,      {.v = &layouts[2]} },
+	{ MODKEY|ShiftMask|ControlMask,           XK_m,      setlayout,      {.v = &layouts[7]} },
 	{ MODKEY|ShiftMask,                       XK_g,      setlayout,      {.v = &layouts[3]} },
 	{ MODKEY|ShiftMask,                       XK_d,      setlayout,      {.v = &layouts[4]} },
 	{ MODKEY|ShiftMask,                       XK_b,      setlayout,      {.v = &layouts[5]} },

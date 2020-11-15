@@ -57,6 +57,7 @@
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
 #define ISVISIBLE(C, M)         ((C->tags & M->tagset[M->seltags]))
+#define ISFULLMONOCLE(C)	((C)->mon->lt[(C)->mon->sellt]->arrange == fullmonocle && !(C)->isfloating)
 #define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw + 2*gappx)
@@ -253,6 +254,7 @@ static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
 static void monocle(Monitor *m);
+static void fullmonocle(Monitor *m);
 static void motionnotify(XEvent *e);
 static void movemouse(const Arg *arg);
 static Client *nexttiled(Client *c, Monitor *m);
@@ -649,8 +651,9 @@ arrangemon(Monitor *m)
 	strncpy(m->ltsymbol, m->lt[m->sellt]->symbol, sizeof m->ltsymbol);
 	if (m->lt[m->sellt]->arrange) {
 		m->lt[m->sellt]->arrange(m);
-		animateclient_endall();
 	}
+	/* Needs to be done every time, since we sometimes call this function to make sure all animations finished. */
+	animateclient_endall();
 }
 
 void
@@ -792,7 +795,8 @@ buttonpress(XEvent *e)
 	for (i = 0; i < LENGTH(buttons); i++)
 		if (click == buttons[i].click && buttons[i].func && buttons[i].button == ev->button
 				&& CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state)) {
-			tempdisableanimation = 1; /* Disable animations on all button events to make them more responsive */
+			if (buttons[i].func == setmfact)
+				tempdisableanimation = 1; /* Disable animations on scroll events to make them more responsive */
 			buttons[i].func(click == ClkTagBar && buttons[i].arg.i == 0 ? &arg : &buttons[i].arg);
 			tempdisableanimation = 0;
 		}
@@ -922,7 +926,7 @@ configure(Client *c)
 	ce.y = c->y;
 	ce.width = c->w;
 	ce.height = c->h;
-	ce.border_width = c->bw;
+	ce.border_width = ISFULLMONOCLE(c) ? 0 : c->bw;
 	ce.above = None;
 	ce.override_redirect = False;
 	XSendEvent(dpy, c->win, False, StructureNotifyMask, (XEvent *)&ce);
@@ -992,8 +996,10 @@ configurerequest(XEvent *e)
 				c->y = m->my + (m->mh / 2 - HEIGHT(c) / 2); /* center in y direction */
 			if ((ev->value_mask & (CWX|CWY)) && !(ev->value_mask & (CWWidth|CWHeight)))
 				configure(c);
-			if (ISVISIBLE(c, m))
+			if (ISVISIBLE(c, m)) {
 				XMoveResizeWindow(dpy, c->win, c->x, c->y, c->w, c->h);
+				roundcornersclient(c);
+			}
 		} else
 			configure(c);
 	} else {
@@ -1584,13 +1590,22 @@ manage(Window w, XWindowAttributes *wa)
 	if (term)
 		swallow(term, c);
 
-	arrange(c->mon);
-
-	/* Needed here, when the window is floating etc. */
-	roundcornersclient(c);
+	/* Move Window to center, when in floating */
+	if (c->isfloating || !c->mon->lt[c->mon->sellt]->arrange) {
+		if (c->x != c->mon->mx || c->y != c->mon->my)
+			/* Maybe this is not even needed */
+			resize(c, c->x, c->y, c->w, c->h, 0, 0);
+		else
+			/* TODO: in center of transient window, if exists */
+			resize(c, c->mon->wx + c->mon->ww / 2 - c->w / 2, c->mon->wy + c->mon->wh / 2 - c->h / 2, c->w, c->h, 0, 0);
+	}
 
 	XMapWindow(dpy, tw); /* Make the window visible */
+
+	roundcornersclient(c); /* Sometimes this is needed to be called */
+
 	focus(NULL);
+	arrange(c->mon); /* TODO: Maybe move arrange befor this, to have a better fade in. Remember to do something about the warp call in restack, it messes with the window focus! */
 	spawnbarupdate();
 }
 
@@ -1631,6 +1646,21 @@ monocle(Monitor *m)
 	snprintf(m->ltsymbol, sizeof m->ltsymbol, "[%d]", n);
 	for (c = nexttiled(m->cl->clients, m); c; c = nexttiled(c->next, m))
 		resize(c, m->wx, m->wy, m->ww - 2 * c->bw, m->wh - 2 * c->bw, 0, 1);
+}
+
+void
+fullmonocle(Monitor *m)
+{
+	unsigned int n = 0;
+	Client *c;
+
+	for (c = m->cl->clients; c; c = c->next)
+		if (ISVISIBLE(c, m))
+			n++;
+	/* override layout symbol */
+	snprintf(m->ltsymbol, sizeof m->ltsymbol, "|%d|", n);
+	for (c = nexttiled(m->cl->clients, m); c; c = nexttiled(c->next, m))
+		resize(c, m->mx, m->my, m->mw, m->mh, 0, 1);
 }
 
 void
@@ -1696,13 +1726,15 @@ movemouse(const Arg *arg)
 				ny = selmon->wy + selmon->wh - HEIGHT(c) + 2*gappx;
 			if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
 			&& (abs(nx - c->x) > snap || abs(ny - c->y) > snap))
-				togglefloating(NULL);
+				// togglefloating(NULL);
+				selmon->sel->isfloating = 1;
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
 				resize(c, nx, ny, c->w, c->h, 1, 0);
 			break;
 		}
 	} while (ev.type != ButtonRelease);
 	XUngrabPointer(dpy, CurrentTime);
+	arrange(selmon);
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
 		sendmon(c, m);
 		selmon = m;
@@ -1892,10 +1924,9 @@ resize(Client *c, int x, int y, int w, int h, int interact, int animate)
 	if (c->isfloating || interact || m->lt[m->sellt]->arrange == NULL) {
 		currgap = 0;
 	} else {
-		if (m->lt[m->sellt]->arrange == monocle || n == 1) {
-			/* This code is executed, when we have the monocle layout or just one client. */
-			currgap = gappx;
-			// c.bw = 0;
+		if (m->lt[m->sellt]->arrange == fullmonocle) {
+			/* This code is executed, when we have the fullscreen monocle layout. */
+			currgap = 0;
 		} else {
 			currgap = gappx;
 		}
@@ -1924,7 +1955,7 @@ void
 resizeclient(Client *c, int x, int y, int w, int h)
 {
 	XWindowChanges wc;
-	wc.border_width = c->bw;
+	wc.border_width = ISFULLMONOCLE(c) ? 0 : c->bw;
 
 	c->oldx = c->x; c->x = wc.x = x;
 	c->oldy = c->y; c->y = wc.y = y;
@@ -1997,7 +2028,8 @@ resizemouse(const Arg *arg)
 			{
 				if (!c->isfloating && selmon->lt[selmon->sellt]->arrange
 				&& (abs(nw - c->w) > snap || abs(nh - c->h) > snap))
-					togglefloating(NULL);
+					// togglefloating(NULL);
+					selmon->sel->isfloating = 1;
 			}
 			if (!selmon->lt[selmon->sellt]->arrange || c->isfloating)
 				resize(c, nx, ny, nw, nh, 1, 0);
@@ -2009,6 +2041,7 @@ resizemouse(const Arg *arg)
 		      vertcorner ? (-c->bw) : (c->h + c->bw - 1));
 	XUngrabPointer(dpy, CurrentTime);
 	while (XCheckMaskEvent(dpy, EnterWindowMask, &ev));
+	arrange(selmon);
 	if ((m = recttomon(c->x, c->y, c->w, c->h)) != selmon) {
 		sendmon(c, m);
 		selmon = m;
@@ -2034,9 +2067,20 @@ restack_nowarp(Monitor *m)
 	drawbar(m);
 	if (!m->sel)
 		return;
-	if (m->sel->isfloating || !m->lt[m->sellt]->arrange)
+	if (!m->lt[m->sellt]->arrange || m->sel->isfloating)
+		XRaiseWindow(dpy, m->sel->win); /* Raise the currently selected floating window, if any */
+
+	if (m->lt[m->sellt]->arrange == fullmonocle) {
 		XRaiseWindow(dpy, m->sel->win);
-	if (m->lt[m->sellt]->arrange) {
+		/* Raise all other floating windows to the top 
+		 * TODO: In richtige Reihefolge bringen */
+		for (c = m->cl->stack; c; c = c->snext)
+			if (c->isfloating && ISVISIBLE(c, m)) {
+				XRaiseWindow(dpy, c->win);
+			}
+		if (m->sel->isfloating)
+			XRaiseWindow(dpy, m->sel->win);
+	} else if (m->lt[m->sellt]->arrange) {
 		wc.stack_mode = Below;
 		wc.sibling = m->barwin;
 		for (c = m->cl->stack; c; c = c->snext)
@@ -2054,20 +2098,33 @@ roundcornersclient(Client *c)
 {
 	Pixmap mask;
 	GC shapegc;
+	int r, bw;
 
 	// if (!c || c->isfullscreen)
 	if (!c || !(c->win) || c->hasroundcorners == 0)
 		return;
 
 	/* Create Border Mask */
-	if (createroundcornermask(&mask, &shapegc, c->win, c->w + 2*c->bw, c->h + 2*c->bw, c->isfullscreen ? 0 : cornerradius + c->bw) == 0) {
-		XShapeCombineMask(dpy, c->win, ShapeBounding, -c->bw, -c->bw, mask, ShapeSet);
+	if (c->isfullscreen || ISFULLMONOCLE(c)) {
+		r = 0;
+		bw = 0;
+	} else {
+		r = cornerradius + c->bw;
+		bw = c->bw;
+	}
+
+	if (createroundcornermask(&mask, &shapegc, c->win, c->w + 2*bw, c->h + 2*bw, r) == 0) {
+		XShapeCombineMask(dpy, c->win, ShapeBounding, -bw, -bw, mask, ShapeSet);
 		XFreePixmap(dpy, mask);
 		XFreeGC(dpy, shapegc);
 	}
 
 	/* Create Clip Mask */
-	if (createroundcornermask(&mask, &shapegc, c->win, c->w, c->h, c->isfullscreen ? 0 : cornerradius) == 0) {
+	if (r >= c->bw) {
+		r -= c->bw;
+	}
+
+	if (createroundcornermask(&mask, &shapegc, c->win, c->w, c->h, r) == 0) {
 		XShapeCombineMask(dpy, c->win, ShapeClip, 0, 0, mask, ShapeSet);
 		XFreePixmap(dpy, mask);
 		XFreeGC(dpy, shapegc);
@@ -2655,14 +2712,18 @@ togglebar(const Arg *arg)
 void
 togglefloating(const Arg *arg)
 {
+	int alreadyfloat;
+
 	if (!selmon->sel)
 		return;
 	if (selmon->sel->isfullscreen) /* no support for fullscreen windows */
 		return;
+	alreadyfloat = selmon->sel->isfloating || !selmon->lt[selmon->sellt]->arrange;
 	selmon->sel->isfloating = !selmon->sel->isfloating || selmon->sel->isfixed;
-	if (selmon->sel->isfloating)
-		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
-			selmon->sel->w, selmon->sel->h, 0, 0);
+	if (selmon->sel->isfloating && !alreadyfloat)
+		resize(selmon->sel, selmon->wx + selmon->ww / 4, selmon->wy + selmon->wh / 4,
+			selmon->ww / 2, selmon->wh / 2, 0, 1);
+	animateclient_endall(); /* TODO: Improve this, by having only one animation */
 	arrange(selmon);
 }
 
@@ -2756,6 +2817,7 @@ unmanage(Client *c, int destroyed)
 
 	if (c->swallowing) {
 		unswallow(c);
+		spawnbarupdate();
 		return;
 	}
 
@@ -3499,7 +3561,7 @@ bstack(Monitor *m) {
 		tw = m->ww;
 		ty = m->wy;
 	}
-	for (i = mx = 0, tx = m->wx, c = nexttiled(m->cl->clients, m); c; c = nexttiled(c->next, m), i++) {
+	for (i = mx = 0, tx = 0, c = nexttiled(m->cl->clients, m); c; c = nexttiled(c->next, m), i++) {
 		if (i < m->nmaster) {
 			w = (m->ww - mx) / (MIN(n, m->nmaster) - i);
 			resize(c, m->wx + mx, m->wy, w - (2 * c->bw), mh - (2 * c->bw), 0, 1);
@@ -3507,7 +3569,7 @@ bstack(Monitor *m) {
 				mx += WIDTH_G(c);
 		} else {
 			h = m->wh - mh;
-			resize(c, tx, ty, tw - (2 * c->bw), h - (2 * c->bw), 0, 1);
+			resize(c, m->wx + tx, ty, tw - (2 * c->bw), h - (2 * c->bw), 0, 1);
 			if (tx + WIDTH_G(c) < m->ww)
 				tx += WIDTH_G(c);
 		}
