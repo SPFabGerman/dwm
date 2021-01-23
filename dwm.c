@@ -2104,7 +2104,6 @@ roundcornersclient(Client *c)
 	if (!c || !(c->win) || c->hasroundcorners == 0)
 		return;
 
-	/* Create Border Mask */
 	if (c->isfullscreen || ISFULLMONOCLE(c)) {
 		r = 0;
 		bw = 0;
@@ -2113,6 +2112,11 @@ roundcornersclient(Client *c)
 		bw = c->bw;
 	}
 
+	// XSync(dpy, False);
+	XGrabServer(dpy);
+	// XSetErrorHandler(xerrordummy);
+
+	/* Create Border Mask */
 	if (createroundcornermask(&mask, &shapegc, c->win, c->w + 2*bw, c->h + 2*bw, r) == 0) {
 		XShapeCombineMask(dpy, c->win, ShapeBounding, -bw, -bw, mask, ShapeSet);
 		XFreePixmap(dpy, mask);
@@ -2129,6 +2133,11 @@ roundcornersclient(Client *c)
 		XFreePixmap(dpy, mask);
 		XFreeGC(dpy, shapegc);
 	}
+
+	XSync(dpy, False);
+	// XSetErrorHandler(xerror);
+	XUngrabServer(dpy);
+	// XSync(dpy, False);
 }
 
 void
@@ -2155,8 +2164,7 @@ createroundcornermask(Pixmap * maskP, GC * shapegcP, Window win, int w, int h, i
 		return 1;
 
 	/* Test and return immediatly, if the window does not exist anymore.
-	 * (And prey, it does not get destroyed, while this function is running.) 
-	 * TODO: Maybe, silently ignore all errors. */
+	 * (And prey, it does not get destroyed, while this function is running.) */
 	if (!(XGetWindowAttributes(dpy, win, &xwa)))
 		return 1;
 	
@@ -2165,7 +2173,6 @@ createroundcornermask(Pixmap * maskP, GC * shapegcP, Window win, int w, int h, i
 	
 	if (!(shapegc = XCreateGC(dpy, mask, 0, NULL))){
 	    XFreePixmap(dpy, mask);
-	    free(shapegc);
 	    return 1;
 	}
 
