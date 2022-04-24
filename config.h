@@ -2,23 +2,17 @@
 
 /* appearance */
 static const unsigned int borderpx  = 2;        /* border pixel of windows */
-static const int cornerradius       = 4;
+static const int cornerradius       = 4;        /* Radius of window corners; 0 disables this feature completely. */
 /* TODO: Make per Client */
 static const unsigned int gappxdf   = 4;        /* default gaps between windows */
 static const unsigned int snap      = 16;       /* snap pixel */
 static const int swallowfloating    = 0;        /* 1 means swallow floating windows by default */
 static const int useanimation       = 1;        /* 1 means animate window movements */
-static const int animationframes    = 10;       /* Amount of frames the animations should take per window. */
+static const int animationframes    = 30;       /* Amount of frames the animations should take per window. */
 static const int framereduction     = 0;        /* Amount of frames, the animation should be reduced by, per new Client. */
 static const int frreducstart       = -1;       /* After how many Clients should the animation time be decreased? */
-static const int framedur           = 15000;    /* Duration of a single animation frame in microseconds */
-static const int showbar            = 0;        /* 0 means no bar */
-static const int topbar             = 1;        /* 0 means bottom bar */
-static const int simplebar	    = 1;	/* 1 means only the tags and layout is shown. */
-static const int barheight	    = 22;	/* Height of the bar. Set to 0 to use default height. */
-static const int barxoffset	    = 4;	/* X and Y Offset of the bar. Works only if simplebar is on. */
-static const int baryoffset	    = 4;
-static const int extrareservedspace = 30;        /* Space at barpos, where no window can be drawn */
+static const int framedur           = 15000 / 30; /* Duration of a single animation frame in microseconds */
+static const int extrareservedspace = 30;       /* Space at barpos, where no window can be drawn */
 #define MAINFONT "MesloLGS NF:size=16"
 static const char *fonts[]          = { "MesloLGS:size=10", MAINFONT };
 /* TODO: Delete DMENU Stuff */
@@ -27,11 +21,11 @@ static const char dmenufont[]       = MAINFONT;
 #define WHITE "#dcdfe4"
 #define CYAN "#519fdf"
 #define GREEN "#88b369"
-static char col_bg_norm[]       = BLACK;
+static char col_bg_norm[]      = BLACK;
 static char col_bg_sel[]       = WHITE;
-static char col_fg_norm[]       = WHITE;
+static char col_fg_norm[]      = WHITE;
 static char col_fg_sel[]       = BLACK;
-static char col_brd_sel[]        = CYAN;
+static char col_brd_sel[]      = CYAN;
 static char col_brd_norm[]     = GREEN;
 static const unsigned int baralpha = 0xd0;
 static const unsigned int borderalpha = OPAQUE;
@@ -46,12 +40,7 @@ static const unsigned int alphas[][3]      = {
 	[SchemeSel]  = { OPAQUE, baralpha, borderalpha },
 };
 
-/* tagging */
-/* static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" }; */
-static const char *tags[] = { "", "", "", "", "", "", "", "", "" };
-static const char *tags_inuse[] = { "", "", "", "", "", "", "", "", "" };
-static const char *tags_occupied[] = { "", "", "", "", "", "", "", "", "" };
-static const int tagpadding = 14; /* Padding only for the tag area of the bar. */
+#define NUMTAGS 9
 
 /* layout(s) */
 static const float mfact     = 0.5; /* factor of master area size [0.05..0.95] */
@@ -110,40 +99,32 @@ static const char * barupdate_cmd[] = { "polybar-msg", "hook", "dwmtags", "1", N
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_bg_norm, "-nf", col_fg_norm, "-sb", col_bg_sel, "-sf", col_fg_sel, NULL };
-static const char *termcmd[]  = { "st", NULL };
-
 static Key keys[] = {
 	/* modifier                     key        function        argument */
-	// Spawn Commands
- 	// { MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
-	// { MODKEY,                       XK_t,            spawn,          {.v = termcmd } },
 
-	// { MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_Down,      focusstack,     {.i = +1 } },
-	{ MODKEY,                       XK_Up,      focusstack,     {.i = -1 } },
+	{ MODKEY,                       XK_Up,        focusstack,     {.i = -1 } },
 	{ MODKEY,                       XK_plus,      incnmaster,     {.i = +1 } },
-	{ MODKEY,                       XK_minus,      incnmaster,     {.i = -1 } },
+	{ MODKEY,                       XK_minus,     incnmaster,     {.i = -1 } },
 	/* { MODKEY,                       XK_equal,      incnmaster,     {.i = 0 } }, */ // Conflicts with Shift-0 (Tag All)
 	{ MODKEY,                       XK_less,      setmfact,       {.f = -0.05} },
-	{ MODKEY|ShiftMask,                       XK_less,      setmfact,       {.f = +0.05} },
-	{ MODKEY|Mod5Mask,                       XK_less,      setmfact,       {.f = mfact+1.0} },
-	{ MODKEY,                       XK_g,          setgap,         {.i = 0 } },
-	{ MODKEY,                       XK_Return, zoom,           {0} }, // Focus Selected
-	{ MODKEY,                       XK_Tab,    view,           {0} }, // Tab betwenn recent Tags
-	{ MODKEY,                       XK_c,      killclient,     {0} },
+	{ MODKEY|ShiftMask,             XK_less,      setmfact,       {.f = +0.05} },
+	{ MODKEY|Mod5Mask,              XK_less,      setmfact,       {.f = mfact+1.0} },
+	{ MODKEY,                       XK_g,         setgap,         {.i = 0 } },
+	{ MODKEY,                       XK_Return,    zoom,           {0} }, // Focus Selected
+	{ MODKEY,                       XK_Tab,       view,           {0} }, // Tab betwenn recent Tags
+	{ MODKEY,                       XK_c,         killclient,     {0} },
 
 	// Change Layouts
 	{ MODKEY|ShiftMask,                       XK_t,      setlayout,      {.v = &layouts[0]} },
-	{ MODKEY|ShiftMask,                       XK_f,      setlayout,      {.v = &layouts[1]} },
+	{ MODKEY|ShiftMask|ControlMask,           XK_f,      setlayout,      {.v = &layouts[1]} },
 	{ MODKEY|ShiftMask,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY|ShiftMask,                       XK_g,      setlayout,      {.v = &layouts[3]} },
 	{ MODKEY|ShiftMask,                       XK_d,      setlayout,      {.v = &layouts[4]} },
 	{ MODKEY|ShiftMask,                       XK_b,      setlayout,      {.v = &layouts[5]} },
 	{ MODKEY|ShiftMask,                       XK_c,      setlayout,      {.v = &layouts[6]} },
 	{ MODKEY|ShiftMask,                       XK_Tab,    setlayout,      {0} },
-	{ MODKEY,                                 XK_space,  togglefloating, {0} },
+	{ MODKEY|ShiftMask,                       XK_f,  togglefloating, {0} },
 
 	// { MODKEY,                       XK_F5,     xrdb,           {.v = NULL } },
 
@@ -185,15 +166,6 @@ static Button buttons[] = {
 	{ ClkClientWin,         MODKEY,         Button5,        setmfact,       { .f = -0.025 } },
 	{ ClkRootWin,           MODKEY,         Button4,        setmfact,       { .f = +0.025 } },
 	{ ClkRootWin,           MODKEY,         Button5,        setmfact,       { .f = -0.025 } },
-
-	{ ClkTagBar,            0,              Button1,        view,           {0} },
-	{ ClkTagBar,            0,              Button3,        toggleview,     {0} },
-	{ ClkTagBar,            MODKEY,         Button1,        tag,            {0} },
-	{ ClkTagBar,            MODKEY,         Button3,        toggletag,      {0} },
-	{ ClkLtSymbol,          0,              Button1,        setlayout,      {0} },
-	{ ClkLtSymbol,          0,              Button3,        setlayout,      {.v = &layouts[2]} },
-	{ ClkWinTitle,          0,              Button2,        zoom,           {0} },
-	{ ClkStatusText,        0,              Button2,        spawn,          {.v = termcmd } },
 };
 
 // === DWMC Extra Functions ===
@@ -247,7 +219,6 @@ static Signal signals[] = {
 	/* signum           function */
 	{ "focusstack",     focusstack },
 	{ "setmfact",       setmfact },
-	{ "togglebar",      togglebar },
 	{ "incnmaster",     incnmaster },
 	{ "togglefloating", togglefloating },
 	{ "focusmon",       focusmon },
