@@ -65,7 +65,6 @@
 #define HEIGHT_G(X)             ((X)->goalh + 2 * (X)->bw + 2*gappx)
 #define TAGMASK                 ((1 << NUMTAGS) - 1)
 #define TAGSLENGTH              (NUMTAGS)
-#define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
 #define XRDB_LOAD_COLOR(R,V)    if (XrmGetResource(xrdb, R, NULL, &type, &value) == True) { \
                                   if (value.addr != NULL && strnlen(value.addr, 8) == 7 && value.addr[0] == '#') { \
                                     int i = 1; \
@@ -88,7 +87,7 @@
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
 enum { SchemeNorm, SchemeSel }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
-       NetWMFullscreen, NetActiveWindow, NetWMWindowType,
+       NetWMFullscreen, NetWMMaxVert, NetWMMaxHorz, NetActiveWindow, NetWMWindowType,
        NetWMWindowTypeDialog, NetClientList, NetDesktopNames, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop, NetLast }; /* EWMH atoms */
 enum { WMProtocols, WMDelete, WMState, WMTakeFocus, WMLast }; /* default atoms */
 enum { ClkClientWin, ClkRootWin, ClkLast }; /* clicks */
@@ -232,7 +231,7 @@ static void focus(Client *c);
 static void focusin(XEvent *e);
 static void focusmon(const Arg *arg);
 static void focusstack(const Arg *arg);
-static Atom getatomprop(Client *c, Atom prop);
+static Atom getatomprop(Client *c, Atom prop, int num);
 static int getrootptr(int *x, int *y);
 static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
@@ -292,7 +291,6 @@ static void unfocus(Client *c, int setfocus);
 static void unmanage(Client *c, int destroyed);
 static void unmapnotify(XEvent *e);
 static void updatecurrentdesktop(void);
-static void updatebarpos(Monitor *m);
 static void updatebars(void);
 static void updateclientlist(void);
 static int updategeom(void);
@@ -328,8 +326,6 @@ static const char broken[] = "broken";
 static int scanner;
 static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
-static int bh = 0;      /* bar geometry */
-static int lrpad;            /* sum of left and right padding for text */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
@@ -575,10 +571,10 @@ applysizehints(Client *c, int *x, int *y, int *w, int *h, int interact)
 		if (*y + *h + 2 * c->bw <= m->wy)
 			*y = m->wy;
 	}
-	if (*h < bh)
-		*h = bh;
-	if (*w < bh)
-		*w = bh;
+	if (*h < 1)
+		*h = 1;
+	if (*w < 1)
+		*w = 1;
 	if (c->useresizehints || c->isfloating || !c->mon->lt[c->mon->sellt]->arrange) {
 		/* see last two sentences in ICCCM 4.1.2.3 */
 		baseismin = c->basew == c->minw && c->baseh == c->minh;
@@ -886,7 +882,7 @@ configurenotify(XEvent *e)
 		sw = ev->width;
 		sh = ev->height;
 		if (updategeom() || dirty) {
-			drw_resize(drw, sw, bh);
+			// drw_resize(drw, sw, 0); // Can probably be removed
 			updatebars();
 			for (m = mons; m; m = m->next) {
 				for (c = m->cl->clients; c; c = c->next)
@@ -1137,16 +1133,18 @@ focusstack(const Arg *arg)
 }
 
 Atom
-getatomprop(Client *c, Atom prop)
+getatomprop(Client *c, Atom prop, int num)
 {
 	int di;
-	unsigned long dl;
+	unsigned long dl1, dl2;
 	unsigned char *p = NULL;
 	Atom da, atom = None;
 
 	if (XGetWindowProperty(dpy, c->win, prop, 0L, sizeof atom, False, XA_ATOM,
-		&da, &di, &dl, &dl, &p) == Success && p) {
-		atom = *(Atom *)p;
+		&da, &di, &dl1, &dl2, &p) == Success && p) {
+        if (num < dl1) {
+            atom = ((Atom *)p)[num];
+        }
 		XFree(p);
 	}
 	return atom;
@@ -1375,10 +1373,6 @@ loadxrdb()
       xrdb = XrmGetStringDatabase(resm);
 
       if (xrdb != NULL) {
-        XRDB_LOAD_COLOR("dwm.foreground", col_fg_norm);
-        XRDB_LOAD_COLOR("dwm.background", col_fg_sel);
-        XRDB_LOAD_COLOR("dwm.background", col_bg_norm);
-        XRDB_LOAD_COLOR("dwm.foreground", col_bg_sel);
         XRDB_LOAD_COLOR("dwm.color4", col_brd_sel);
         XRDB_LOAD_COLOR("dwm.color2", col_brd_norm);
       }
@@ -1421,8 +1415,8 @@ manage(Window w, XWindowAttributes *wa)
 		c->y = c->mon->my + c->mon->mh - HEIGHT(c);
 	c->x = MAX(c->x, c->mon->mx);
 	/* only fix client y-offset, if the client center might cover the bar */
-	c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
-		&& (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
+	// c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
+		// && (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
 	c->bw = borderpx;
 
 	wc.border_width = c->bw;
@@ -2298,9 +2292,6 @@ setup(void)
 	root = RootWindow(dpy, screen);
 	xinitvisual();
 	drw = drw_create(dpy, screen, root, sw, sh, visual, depth, cmap);
-	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
-		die("no fonts could be loaded.");
-	lrpad = drw->fonts->h;
 	updategeom();
 	/* init atoms */
 	utf8string = XInternAtom(dpy, "UTF8_STRING", False);
@@ -2314,6 +2305,8 @@ setup(void)
 	netatom[NetWMState] = XInternAtom(dpy, "_NET_WM_STATE", False);
 	netatom[NetWMCheck] = XInternAtom(dpy, "_NET_SUPPORTING_WM_CHECK", False);
 	netatom[NetWMFullscreen] = XInternAtom(dpy, "_NET_WM_STATE_FULLSCREEN", False);
+	netatom[NetWMMaxVert] = XInternAtom(dpy, "_NET_WM_STATE_MAXIMIZED_VERT", False);
+	netatom[NetWMMaxHorz] = XInternAtom(dpy, "_NET_WM_STATE_MAXIMIZED_HORZ", False);
 	netatom[NetWMWindowType] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE", False);
 	netatom[NetWMWindowTypeDialog] = XInternAtom(dpy, "_NET_WM_WINDOW_TYPE_DIALOG", False);
 	netatom[NetClientList] = XInternAtom(dpy, "_NET_CLIENT_LIST", False);
@@ -2323,7 +2316,7 @@ setup(void)
 	netatom[NetDesktopNames] = XInternAtom(dpy, "_NET_DESKTOP_NAMES", False);
 	/* init cursors */
 	cursor[CurNormal] = drw_cur_create(drw, XC_left_ptr);
-	cursor[CurResize] = drw_cur_create(drw, XC_sizing);
+	cursor[CurResize] = drw_cur_create(drw, XC_sizing); // TODO: Change to better cursor
 	cursor[CurMove] = drw_cur_create(drw, XC_fleur);
 	/* init appearance */
 	scheme = ecalloc(LENGTH(colors), sizeof(Clr *));
@@ -2661,14 +2654,6 @@ updatebars(void)
 }
 
 void
-updatebarpos(Monitor *m)
-{
-    m->wy = m->my + extrareservedspace;
-	m->wh = m->mh - extrareservedspace;
-    m->by = -bh;
-}
-
-void
 updateclientlist()
 {
 	Client *c;
@@ -2734,7 +2719,9 @@ updategeom(void)
 					m->my = m->wy = unique[i].y_org;
 					m->mw = m->ww = unique[i].width;
 					m->mh = m->wh = unique[i].height;
-					updatebarpos(m);
+                    m->wy = m->my + extrareservedspace;
+                    m->wh = m->mh - extrareservedspace;
+                    m->by = -0;
 				}
 		} else { /* less monitors available nn < n */
 			for (i = nn; i < n; i++) {
@@ -2759,7 +2746,9 @@ updategeom(void)
 			dirty = 1;
 			mons->mw = mons->ww = sw;
 			mons->mh = mons->wh = sh;
-			updatebarpos(mons);
+            mons->wy = mons->my + extrareservedspace;
+            mons->wh = mons->mh - extrareservedspace;
+            mons->by = -0;
 		}
 	}
 	if (dirty) {
@@ -2840,11 +2829,18 @@ updatetitle(Client *c)
 void
 updatewindowtype(Client *c)
 {
-	Atom state = getatomprop(c, netatom[NetWMState]);
-	Atom wtype = getatomprop(c, netatom[NetWMWindowType]);
+	Atom state = getatomprop(c, netatom[NetWMState], 0);
+	Atom wtype = getatomprop(c, netatom[NetWMWindowType], 0);
 
 	if (state == netatom[NetWMFullscreen])
 		setfullscreen(c, 1);
+    else if (state == netatom[NetWMMaxVert]){
+        if (getatomprop(c, netatom[NetWMState], 1) == netatom[NetWMMaxHorz])
+            setfullscreen(c, 1);
+    } else if (state == netatom[NetWMMaxHorz]){
+        if (getatomprop(c, netatom[NetWMState], 1) == netatom[NetWMMaxVert])
+            setfullscreen(c, 1);
+    }
 	if (wtype == netatom[NetWMWindowTypeDialog])
 		c->isfloating = 1;
 }
@@ -2890,12 +2886,12 @@ view(const Arg *arg)
 	if (arg->ui & TAGMASK) { 
 		for (ltag = 0; !(arg->ui & (1<<ltag)) && ltag < TAGSLENGTH; ltag++);
 		/* Change Command Number */
-		tagswap_cmd_number[0] = '1' + ltag;
+		// tagswap_cmd_number[0] = '1' + ltag;
 	} else {
-		tagswap_cmd_number[0] = '0';
+		// tagswap_cmd_number[0] = '0';
 	}
 	/* Spawn the actual Command */
-	const Arg a = { .v = tagswap_cmd };
+	// const Arg a = { .v = tagswap_cmd };
 	if (running) {
 	  // spawn(&a);
 	}

@@ -13,31 +13,23 @@ static const int framereduction     = 0;        /* Amount of frames, the animati
 static const int frreducstart       = -1;       /* After how many Clients should the animation time be decreased? */
 static const int framedur           = 15000 / 30; /* Duration of a single animation frame in microseconds */
 static const int extrareservedspace = 30;       /* Space at barpos, where no window can be drawn */
-#define MAINFONT "MesloLGS NF:size=16"
-static const char *fonts[]          = { "MesloLGS:size=10", MAINFONT };
-/* TODO: Delete DMENU Stuff */
-static const char dmenufont[]       = MAINFONT;
 #define BLACK "#282c34"
 #define WHITE "#dcdfe4"
 #define CYAN "#519fdf"
 #define GREEN "#88b369"
-static char col_bg_norm[]      = BLACK;
-static char col_bg_sel[]       = WHITE;
-static char col_fg_norm[]      = WHITE;
-static char col_fg_sel[]       = BLACK;
 static char col_brd_sel[]      = CYAN;
 static char col_brd_norm[]     = GREEN;
-static const unsigned int baralpha = 0xd0;
 static const unsigned int borderalpha = OPAQUE;
+// TODO: Change the color logic
 static char *colors[][3]      = {
 	/*               fg         bg         border   */
-	[SchemeNorm] = { col_fg_norm, col_bg_norm, col_brd_norm },
-	[SchemeSel]  = { col_fg_sel, col_bg_sel, col_brd_sel },
+	[SchemeNorm] = { col_brd_norm, col_brd_norm, col_brd_norm },
+	[SchemeSel]  = { col_brd_sel, col_brd_sel, col_brd_sel },
 };
 static const unsigned int alphas[][3]      = {
 	/*               fg      bg        border     */
-	[SchemeNorm] = { OPAQUE, baralpha, borderalpha },
-	[SchemeSel]  = { OPAQUE, baralpha, borderalpha },
+	[SchemeNorm] = { borderalpha, borderalpha, borderalpha },
+	[SchemeSel]  = { borderalpha, borderalpha, borderalpha },
 };
 
 #define NUMTAGS 9
@@ -77,12 +69,15 @@ static const Rule rules[] = {
 	{ "st",       NULL,       NULL,       0,         0,          1,          0,         -1,      NULL,        0,           0,              0,             1  },
 	{ NULL,       NULL,       "Event Tester",0,      1,          0,          1,         -1,      NULL,        0,           0,              0,             0  }, /* xev */
 	{ "MPlayer",  NULL,       NULL,       0,         0,          0,          0,         -1,      NULL,        1,           0,              0,             0  }, /* for webcam */
+	{ "Mailspring", NULL,     NULL,       0,         0,          0,          0,         -1,      NULL,        0,           1,              0,             0  },
+	// { "Nwg-drawer", NULL,     NULL,       0,         1,          0,          0,         -1,      NULL,        0,           0,              0,             0  },
+	{ "Nwg-bar",  NULL,       NULL,       0,         1,          0,          0,         -1,      NULL,        0,           0,              0,             0  },
 };
 
 /* Command to be executed, when swapping the tag.
  * tagswap_cmd_number will be replaced by the number of the selected tag. */
-static char tagswap_cmd_number[2] = "1";
-static const char * tagswap_cmd[] = { "swapbg", tagswap_cmd_number /* Will be later replaced */, "-q", NULL };
+// static char tagswap_cmd_number[2] = "1";
+// static const char * tagswap_cmd[] = { "swapbg", tagswap_cmd_number /* Will be later replaced */, "-q", NULL };
 
 /* Cmd to update the external bar */
 static const char * barupdate_cmd[] = { "polybar-msg", "hook", "dwmtags", "1", NULL };
