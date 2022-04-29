@@ -1,5 +1,8 @@
 /* See LICENSE file for copyright and license details. */
 
+#include "dwm.h"
+#include "layouts.h"
+
 /* appearance */
 static const unsigned int borderpx  = 2;        /* border pixel of windows */
 static const int cornerradius       = 4;        /* Radius of window corners; 0 disables this feature completely. */
@@ -17,6 +20,7 @@ static const int extrareservedspace = 30;       /* Space at barpos, where no win
 #define WHITE "#dcdfe4"
 #define CYAN "#519fdf"
 #define GREEN "#88b369"
+#define OPAQUE 0xffU
 static char col_brd_sel[]      = CYAN;
 static char col_brd_norm[]     = GREEN;
 static const unsigned int borderalpha = OPAQUE;
@@ -40,10 +44,6 @@ static const int nmaster     = 1;    /* number of clients in master area */
 static const int resizehints = 0;    /* 1 means respect size hints in tiled resizals */
 
 /* === Layouts === */
-#include "gaplessgrid.c"
-#include "horizgrid.c"
-#include "fibonacci.c"
-#include "tcl.c"
 static const Layout layouts[] = {
 	/* symbol     arrange function */
 	{ "[]=",      tile },    /* first entry is default */
@@ -69,6 +69,7 @@ static const Rule rules[] = {
 	{ "st",       NULL,       NULL,       0,         0,          1,          0,         -1,      NULL,        0,           0,              0,             1  },
 	{ NULL,       NULL,       "Event Tester",0,      1,          0,          1,         -1,      NULL,        0,           0,              0,             0  }, /* xev */
 	{ "MPlayer",  NULL,       NULL,       0,         0,          0,          0,         -1,      NULL,        1,           0,              0,             0  }, /* for webcam */
+	{ "firefox",  NULL,       "Picture-in-Picture", 0, 0,        0,          0,         -1,      NULL,        1,           0,              0,             0  },
 	{ "Mailspring", NULL,     NULL,       0,         0,          0,          0,         -1,      NULL,        0,           1,              0,             0  },
 	// { "Nwg-drawer", NULL,     NULL,       0,         1,          0,          0,         -1,      NULL,        0,           0,              0,             0  },
 	{ "Nwg-bar",  NULL,       NULL,       0,         1,          0,          0,         -1,      NULL,        0,           0,              0,             0  },

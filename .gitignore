@@ -3,7 +3,5 @@ patches/
 
 dwm
 dwmq
-dwm.o
-drw.o
-util.o
+*.o
 

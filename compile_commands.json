@@ -67,5 +67,40 @@
     ],
     "directory": "/home/fabian/build/dwm",
     "file": "/home/fabian/build/dwm/util.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-c",
+      "-g",
+      "-std=c99",
+      "-pedantic",
+      "-Wall",
+      "-Wno-deprecated-declarations",
+      "-pthread",
+      "-O0",
+      "-I/usr/X11R6/include",
+      "-I/usr/include/freetype2",
+      "-D_DEFAULT_SOURCE",
+      "-D_BSD_SOURCE",
+      "-D_POSIX_C_SOURCE=200809L",
+      "-DVERSION=\"6.2\"",
+      "-DXINERAMA",
+      "layouts.c"
+    ],
+    "directory": "/home/fabian/build/dwm",
+    "file": "/home/fabian/build/dwm/layouts.c"
+  },
+  {
+    "arguments": [
+      "/usr/bin/cc",
+      "-c",
+      "-o",
+      "dwmq",
+      "dwmq.c"
+    ],
+    "directory": "/home/fabian/build/dwm",
+    "file": "/home/fabian/build/dwm/dwmq.c",
+    "output": "/home/fabian/build/dwm/dwmq"
   }
 ]

@@ -31,9 +31,5 @@ CFLAGS_OPT= -O0
 CFLAGS   = -g -std=c99 -pedantic -Wall -Wno-deprecated-declarations -pthread ${CFLAGS_OPT} ${INCS} ${CPPFLAGS}
 LDFLAGS  = ${LIBS} -pthread
 
-# Solaris
-#CFLAGS = -fast ${INCS} -DVERSION=\"${VERSION}\"
-#LDFLAGS = ${LIBS}
-
 # compiler and linker
 CC = cc

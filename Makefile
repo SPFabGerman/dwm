@@ -3,10 +3,12 @@
 
 include config.mk
 
-SRC = drw.c dwm.c util.c
+SRC = drw.c dwm.c util.c layouts.c
+ADDSRC = util.c
+HDR = config.h drw.h dwm.h layouts.h util.h sockdef.h
 OBJ = ${SRC:.c=.o}
 
-all: options dwm dwmq
+all: dwm dwmq
 
 options:
 	@echo dwm build options:
@@ -17,10 +19,7 @@ options:
 .c.o:
 	${CC} -c ${CFLAGS} $<
 
-${OBJ}: config.h config.mk sockdef.h
-
-config.h:
-	cp config.def.h $@
+${OBJ}: ${HDR} ${ADDSRC} config.mk
 
 dwm: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS}
@@ -29,17 +28,9 @@ dwmq: dwmq.c sockdef.h
 	${CC} -o $@ $<
 
 clean:
-	rm -f dwm ${OBJ} dwm-${VERSION}.tar.gz
+	rm -f dwm ${OBJ}
 
-dist: clean
-	mkdir -p dwm-${VERSION}
-	cp -R LICENSE Makefile README config.def.h config.mk\
-		dwm.1 drw.h util.h ${SRC} dwm.png transient.c dwm-${VERSION}
-	tar -cf dwm-${VERSION}.tar dwm-${VERSION}
-	gzip dwm-${VERSION}.tar
-	rm -rf dwm-${VERSION}
-
-install: all
+install: all dwm.1
 	mkdir -p ${DESTDIR}${PREFIX}/bin
 	cp -f dwm dwmc dwmq ${DESTDIR}${PREFIX}/bin
 	chmod 755 ${DESTDIR}${PREFIX}/bin/dwm
@@ -51,4 +42,4 @@ uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/dwm\
 		${DESTDIR}${MANPREFIX}/man1/dwm.1
 
-.PHONY: all options clean dist install uninstall
+.PHONY: all options clean install uninstall
