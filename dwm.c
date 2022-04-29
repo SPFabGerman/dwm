@@ -158,7 +158,6 @@ struct Monitor {
 	float mfact;
 	int nmaster;
 	int num;
-	int by;               /* bar geometry */
 	int mx, my, mw, mh;   /* screen size */
 	int wx, wy, ww, wh;   /* window area  */
 	unsigned int seltags;
@@ -1415,7 +1414,7 @@ manage(Window w, XWindowAttributes *wa)
 		c->y = c->mon->my + c->mon->mh - HEIGHT(c);
 	c->x = MAX(c->x, c->mon->mx);
 	/* only fix client y-offset, if the client center might cover the bar */
-	// c->y = MAX(c->y, ((c->mon->by == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
+	// c->y = MAX(c->y, ((0 == c->mon->my) && (c->x + (c->w / 2) >= c->mon->wx)
 		// && (c->x + (c->w / 2) < c->mon->wx + c->mon->ww)) ? bh : c->mon->my);
 	c->bw = borderpx;
 
@@ -2645,7 +2644,7 @@ updatebars(void)
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, 1, 0, depth,
+		m->barwin = XCreateWindow(dpy, root, m->wx, 0, m->ww, 1, 0, depth,
 		                          InputOutput, visual,
 		                          CWOverrideRedirect|CWBackPixel|CWBorderPixel|CWColormap|CWEventMask, &wa);
 		XMapRaised(dpy, m->barwin);
@@ -2721,7 +2720,6 @@ updategeom(void)
 					m->mh = m->wh = unique[i].height;
                     m->wy = m->my + extrareservedspace;
                     m->wh = m->mh - extrareservedspace;
-                    m->by = -0;
 				}
 		} else { /* less monitors available nn < n */
 			for (i = nn; i < n; i++) {
@@ -2748,7 +2746,6 @@ updategeom(void)
 			mons->mh = mons->wh = sh;
             mons->wy = mons->my + extrareservedspace;
             mons->wh = mons->mh - extrareservedspace;
-            mons->by = -0;
 		}
 	}
 	if (dirty) {
@@ -2834,8 +2831,8 @@ updatewindowtype(Client *c)
 
 	if (state == netatom[NetWMFullscreen])
 		setfullscreen(c, 1);
-    else if (state == netatom[NetWMMaxVert]){
-        if (getatomprop(c, netatom[NetWMState], 1) == netatom[NetWMMaxHorz])
+	else if (state == netatom[NetWMMaxVert]){
+	if (getatomprop(c, netatom[NetWMState], 1) == netatom[NetWMMaxHorz])
             setfullscreen(c, 1);
     } else if (state == netatom[NetWMMaxHorz]){
         if (getatomprop(c, netatom[NetWMState], 1) == netatom[NetWMMaxVert])
