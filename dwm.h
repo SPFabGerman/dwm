@@ -9,7 +9,6 @@
 #define INTERSECT(x,y,w,h,m)    (MAX(0, MIN((x)+(w),(m)->wx+(m)->ww) - MAX((x),(m)->wx)) \
                                * MAX(0, MIN((y)+(h),(m)->wy+(m)->wh) - MAX((y),(m)->wy)))
 #define ISVISIBLE(C, M)         ((C->tags & M->tagset[M->seltags]))
-#define LENGTH(X)               (sizeof X / sizeof X[0])
 #define MOUSEMASK               (BUTTONMASK|PointerMotionMask)
 #define WIDTH(X)                ((X)->w + 2 * (X)->bw + 2*gappx)
 #define WIDTH_G(X)              ((X)->goalw + 2 * (X)->bw + 2*gappx)
@@ -267,6 +266,8 @@ Client *swallowingclient(Window w);
 Client *termforwin(const Client *c);
 pid_t winpid(Window w);
 
+extern Clientlist *cl;
+extern Monitor *mons, *selmon;
 extern unsigned int gappx;
 
 #endif /* DWM_H */

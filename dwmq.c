@@ -23,7 +23,7 @@ int main(int argc, char ** argv) {
 		return -1;
 	}
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
+	strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
 	if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) != 0) {
 		fprintf(stderr, "Could not connect to socket.\n");
 		return -1;

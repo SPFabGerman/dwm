@@ -51,7 +51,9 @@
 
 #include "drw.h"
 #include "dwm.h"
+#include "config.h"
 #include "layouts.h"
+#include "external_cmds.h"
 #include "util.h"
 
 /* variables */
@@ -83,7 +85,7 @@ static Cur *cursor[CurLast];
 static Clr **scheme;
 static Display *dpy;
 static Drw *drw;
-static Monitor *mons, *selmon;
+Monitor *mons, *selmon;
 static Window root, wmcheckwin;
 
 static int useargb = 0;
@@ -91,7 +93,7 @@ static Visual *visual;
 static int depth;
 static Colormap cmap;
 
-static Clientlist *cl;
+Clientlist *cl;
 static Pertag *pertagglist;
 
 static AnimateThreadArg *animatequeue;
@@ -107,7 +109,6 @@ static int overviewmode;
 
 /* configuration, allows nested code to access above variables */
 #include "sockdef.h"
-#include "config.h"
 
 /* Needs to be here, because tags is only defined in config.h. */
 struct Pertag {
@@ -206,7 +207,7 @@ void applyrules(Client *c) {
   class = ch.res_class ? ch.res_class : broken;
   instance = ch.res_name ? ch.res_name : broken;
 
-  for (i = 0; i < LENGTH(rules); i++) {
+  for (i = 0; i < rules_size; i++) {
     r = &rules[i];
     if ((!r->title || strstr(c->name, r->title)) &&
 	(!r->class || strstr(class, r->class)) &&
@@ -466,7 +467,7 @@ void buttonpress(XEvent *e) {
     XAllowEvents(dpy, ReplayPointer, CurrentTime);
     click = ClkClientWin;
   }
-  for (i = 0; i < LENGTH(buttons); i++)
+  for (i = 0; i < buttons_size; i++)
     if (click == buttons[i].click && buttons[i].func &&
 	buttons[i].button == ev->button &&
 	CLEANMASK(buttons[i].mask) == CLEANMASK(ev->state)) {
@@ -520,7 +521,7 @@ void cleanup(void) {
     fprintf(stderr, "Could not shutdown socket.\n");
   if (close(querysocket) != 0)
     fprintf(stderr, "Could not close socket.\n");
-  if (unlink(socket_path) != 0)
+  if (unlink(SOCKET_PATH) != 0)
     fprintf(stderr, "Could not remove socket.\n");
 }
 
@@ -682,7 +683,7 @@ Monitor *createmon(void) {
   m->mfact = mfact;
   m->nmaster = nmaster;
   m->lt[0] = &layouts[0];
-  m->lt[1] = &layouts[1 % LENGTH(layouts)];
+  m->lt[1] = &layouts[1 % layouts_size];
   strncpy(m->ltsymbol, layouts[0].symbol, sizeof m->ltsymbol);
   m->pertag = pertagglist;
 
@@ -902,7 +903,7 @@ void grabbuttons(Client *c, int focused) {
     if (!focused)
       XGrabButton(dpy, AnyButton, AnyModifier, c->win, False, BUTTONMASK,
 		  GrabModeSync, GrabModeSync, None, None);
-    for (i = 0; i < LENGTH(buttons); i++)
+    for (i = 0; i < buttons_size; i++)
       if (buttons[i].click == ClkClientWin)
 	for (j = 0; j < LENGTH(modifiers); j++)
 	  XGrabButton(dpy, buttons[i].button, buttons[i].mask | modifiers[j],
@@ -920,7 +921,7 @@ void grabkeys(void) {
     KeyCode code;
 
     XUngrabKey(dpy, AnyKey, AnyModifier, root);
-    for (i = 0; i < LENGTH(keys); i++)
+    for (i = 0; i < keys_size; i++)
       if ((code = XKeysymToKeycode(dpy, keys[i].keysym)))
 	for (j = 0; j < LENGTH(modifiers); j++)
 	  XGrabKey(dpy, code, keys[i].mod | modifiers[j], root, True,
@@ -970,7 +971,7 @@ void keypress(XEvent *e) {
 
   ev = &e->xkey;
   keysym = XKeycodeToKeysym(dpy, (KeyCode)ev->keycode, 0);
-  for (i = 0; i < LENGTH(keys); i++)
+  for (i = 0; i < keys_size; i++)
     if (keysym == keys[i].keysym &&
 	CLEANMASK(keys[i].mod) == CLEANMASK(ev->state) && keys[i].func)
       keys[i].func(&(keys[i].arg));
@@ -1010,7 +1011,7 @@ int fake_signal(void) {
 	return 1;
 
       // Check if a signal was found, and if so handle it
-      for (i = 0; i < LENGTH(signals); i++)
+      for (i = 0; i < signals_size; i++)
 	if (strncmp(str_sig, signals[i].sig, len_str_sig) == 0 &&
 	    signals[i].func) {
 	  signals[i].func(&(arg));
@@ -1351,7 +1352,7 @@ void *querysocket_execute(void *arg) {
     goto QueryEnd;
   }
 
-  for (i = 0; i < LENGTH(query_funcs); i++) {
+  for (i = 0; i < query_funcs_size; i++) {
     if (strncmp(funcname, query_funcs[i].name, used) == 0) {
       qfunc = query_funcs[i].func;
       break;
@@ -1900,7 +1901,7 @@ void setup(void) {
     pertagglist->mfacts[i] = mfact;
 
     pertagglist->ltidxs[i][0] = &layouts[0];
-    pertagglist->ltidxs[i][1] = &layouts[1 % LENGTH(layouts)];
+    pertagglist->ltidxs[i][1] = &layouts[1 % layouts_size];
     pertagglist->sellts[i] = 0;
   }
 
@@ -1913,8 +1914,8 @@ void setup(void) {
   if ((querysocket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
     die("Could not create socket.\n");
   sockaddr.sun_family = AF_UNIX;
-  strncpy(sockaddr.sun_path, socket_path, sizeof(sockaddr.sun_path) - 1);
-  if (unlink(socket_path) != 0 && errno != ENOENT)
+  strncpy(sockaddr.sun_path, SOCKET_PATH, sizeof(sockaddr.sun_path) - 1);
+  if (unlink(SOCKET_PATH) != 0 && errno != ENOENT)
     die("Could not delete old socket.\n");
   if (bind(querysocket, (struct sockaddr *)&sockaddr, sizeof(sockaddr)) != 0)
     die("Could not bind socket.\n");

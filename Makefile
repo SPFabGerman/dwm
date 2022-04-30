@@ -3,9 +3,9 @@
 
 include config.mk
 
-SRC = drw.c dwm.c util.c layouts.c
+SRC = drw.c dwm.c util.c layouts.c config.c external_cmds.c
 ADDSRC = util.c
-HDR = config.h drw.h dwm.h layouts.h util.h sockdef.h
+HDR = ${SRC:.c=.h} util.h sockdef.h
 OBJ = ${SRC:.c=.o}
 
 all: dwm dwmq
