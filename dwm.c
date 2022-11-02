@@ -78,6 +78,7 @@ static void (*handler[LASTEvent])(XEvent *) = {
     [PropertyNotify] = propertynotify,
     [UnmapNotify] = unmapnotify};
 static Atom wmatom[WMLast], netatom[NetLast];
+static int restart = 0;
 static int running = 1;
 static int startupdone = 0;
 static int tempdisableanimation = 0;
@@ -1304,7 +1305,11 @@ void propertynotify(XEvent *e) {
   }
 }
 
-void quit(const Arg *arg) { running = 0; }
+void quit(const Arg *arg) {
+    if (arg->i)
+        restart = 1;
+    running = 0;
+}
 
 void *querysocket_listen(void *arg) {
   pthread_t thread;
@@ -1894,6 +1899,9 @@ void setup(void) {
   /* clean up any zombies immediately */
   sigchld(0);
 
+  signal(SIGHUP, sighup);
+  signal(SIGTERM, sigterm);
+
   /* init screen */
   screen = DefaultScreen(dpy);
   sw = DisplayWidth(dpy, screen);
@@ -2043,6 +2051,16 @@ void sigchld(int unused) {
     die("can't install SIGCHLD handler:");
   while (0 < waitpid(-1, NULL, WNOHANG))
     ;
+}
+
+void sighup(int unused) {
+  Arg a = {.i = 1};
+  quit(&a);
+}
+
+void sigterm(int unused) {
+  Arg a = {.i = 0};
+  quit(&a);
 }
 
 void spawn(const Arg *arg) {
@@ -2843,5 +2861,7 @@ int main(int argc, char *argv[]) {
   run();
   cleanup();
   XCloseDisplay(dpy);
+  if(restart)
+      execvp(argv[0], argv);
   return EXIT_SUCCESS;
 }

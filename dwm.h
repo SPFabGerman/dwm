@@ -226,6 +226,8 @@ void setviewport(void);
 void seturgent(Client *c, int urg);
 void showhide(Client *c);
 void sigchld(int unused);
+void sighup(int unused);
+void sigterm(int unused);
 void spawn(const Arg *arg);
 void spawnbarupdate();
 void tag(const Arg *arg);
