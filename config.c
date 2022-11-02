@@ -63,6 +63,7 @@ const Rule rules[] = {
 	 *	WM_NAME(STRING) = title
 	 */
 	/* class      instance    title       tags mask  isfloating  isterminal  noswallow  monitor  layout       resizehints  noroundcorners  noanimatemove  noanimateresize */
+	{ "zoom",     NULL,       "zoom",     1 << 8,    1,          0,          0,         -1,      NULL,        0,           0,              0,             0  },
 	{ "zoom",     NULL,       NULL,       1 << 8,    0,          0,          0,         -1,      NULL,        0,           0,              0,             0  },
 	{ "VirtualBox Machine", NULL, NULL,   0,         0,          0,          0,         -1,      &layouts[2], 0,           0,              0,             0  },
 	{ "Foxit Reader", NULL,   NULL,       0,         0,          0,          0,         -1,      &layouts[2], 0,           0,              0,             0  },
