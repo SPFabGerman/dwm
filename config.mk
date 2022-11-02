@@ -33,3 +33,4 @@ LDFLAGS  = ${LIBS} -pthread
 
 # compiler and linker
 CC = cc
+# CC = clang

@@ -753,6 +753,10 @@ void enternotify(XEvent *e) {
     selmon = m;
   } else if (!c || c == selmon->sel)
     return;
+  // Don't change focus if we are in Monocle view and "focus" a different window
+  // (This can sometimes happen with GTK window borders which pass the pointer through)
+  else if (selmon->lt[selmon->sellt]->arrange == monocle && !selmon->sel->isfloating && !c->isfloating)
+    return;
   focus(c);
   restack_nowarp(selmon);
 }

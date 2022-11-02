@@ -6,7 +6,7 @@
 #include "util.h"
 
 /* appearance */
-const unsigned int borderpx  = 2;        /* border pixel of windows */
+const unsigned int borderpx  = 1;        /* border pixel of windows */
 const int cornerradius       = 4;        /* Radius of window corners; 0 disables this feature completely. */
 const unsigned int gappxdf   = 4;        /* default gaps between windows */
 const unsigned int snap      = 16;       /* snap pixel */
@@ -51,7 +51,7 @@ const Layout layouts[] = {
 	{ "###",      horizgrid },
 	{ "\\\\\\",   dwindle },
 	{ "TTT",      bstack },
-	{ "|||",      tcl },
+	{ "|||",      tcl }
 };
 CALC_SIZE(layouts);
 
@@ -63,7 +63,7 @@ const Rule rules[] = {
 	 *	WM_NAME(STRING) = title
 	 */
 	/* class      instance    title       tags mask  isfloating  isterminal  noswallow  monitor  layout       resizehints  noroundcorners  noanimatemove  noanimateresize */
-	{ "zoom",     NULL,       NULL,       1 << 8,    0,          0,          0,         -1,      &layouts[1], 0,           0,              0,             0  },
+	{ "zoom",     NULL,       NULL,       1 << 8,    0,          0,          0,         -1,      NULL,        0,           0,              0,             0  },
 	{ "VirtualBox Machine", NULL, NULL,   0,         0,          0,          0,         -1,      &layouts[2], 0,           0,              0,             0  },
 	{ "Foxit Reader", NULL,   NULL,       0,         0,          0,          0,         -1,      &layouts[2], 0,           0,              0,             0  },
 	{ "Foxit Reader", NULL,   "Form",     0,         1,          0,          1,         -1,      NULL,        0,           1,              0,             0  }, /* prevent bug, when applying pixmap */
@@ -73,7 +73,7 @@ const Rule rules[] = {
 	{ "MPlayer",  NULL,       NULL,       0,         0,          0,          0,         -1,      NULL,        1,           0,              0,             0  }, /* for webcam */
 	{ "firefox",  NULL,       "Picture-in-Picture", 0, 0,        0,          0,         -1,      NULL,        1,           0,              0,             0  },
 	{ "Mailspring", NULL,     NULL,       0,         0,          0,          0,         -1,      NULL,        0,           1,              0,             0  },
-	// { "Nwg-drawer", NULL,     NULL,       0,         1,          0,          0,         -1,      NULL,        0,           0,              0,             0  },
+	{ "Nwg-drawer", NULL,     NULL,       0,         0,          0,          1,         -1,      NULL,        0,           0,              0,             0  },
 	{ "Nwg-bar",  NULL,       NULL,       0,         1,          0,          0,         -1,      NULL,        0,           0,              0,             0  },
 };
 CALC_SIZE(rules);
@@ -106,7 +106,6 @@ Key keys[] = {
 	{ MODKEY,                       XK_less,      setmfact,       {.f = -0.05} },
 	{ MODKEY|ShiftMask,             XK_less,      setmfact,       {.f = +0.05} },
 	{ MODKEY|Mod5Mask,              XK_less,      setmfact,       {.f = mfact+1.0} },
-	{ MODKEY,                       XK_g,         setgap,         {.i = 0 } },
 	{ MODKEY,                       XK_Return,    zoom,           {0} }, // Focus Selected
 	{ MODKEY,                       XK_Tab,       view,           {0} }, // Tab betwenn recent Tags
 	{ MODKEY,                       XK_c,         killclient,     {0} },
