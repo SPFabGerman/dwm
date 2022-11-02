@@ -554,8 +554,14 @@ void clientmessage(XEvent *e) {
 			|| (cme->data.l[0] == 2 /* _NET_WM_STATE_TOGGLE */ &&
 			    !c->isfullscreen)));
   } else if (cme->message_type == netatom[NetActiveWindow]) {
-    if (c != selmon->sel && !c->isurgent)
-      seturgent(c, 1);
+    if (c != selmon->sel && !c->isurgent) {
+      // seturgent(c, 1);
+      Arg a = {.ui = c->tags};
+      selmon = c->mon;
+      view(&a);
+      focus(c);
+      restack(selmon);
+    }
   }
 }
 
